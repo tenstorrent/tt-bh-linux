@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 import sys
 import os
 from pyluwen import PciChip
+from tt_smi.tt_smi_backend import pci_board_reset
 import clock
 
 def parse_args():
@@ -123,6 +124,7 @@ def uart_init(chip, l2cpu_index):
 def main():
     args = parse_args()
     chip = PciChip(0)
+    pci_board_reset([0])
     (l2cpu_noc_x, l2cpu_noc_y) = {
         0: (8, 3),
     }[args.l2cpu]
