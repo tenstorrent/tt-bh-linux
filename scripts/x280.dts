@@ -83,16 +83,25 @@
 
 
     };
-    // Memory limited to 2896MB cause last 1200MB for rootfs
     memory@0 {
         device_type = "memory";
-        reg = <0x4000 0x30000000 0x0 0xb5000000>;
+        reg = <0x4000 0x30000000 0x1 0x00000000>;
+    };
+
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        // Don't map last 1200MB of memory
+        pmem: memory@4000e5000000 {
+            reg = <0x4000 0xe5000000 0x0 0x4b000000>;
+            no-map;
+        };
     };
 
     // Last 1200MB of 4G Memory used for rootfs
     // PMEM regions are not part of 'memory'
-    // 1200MB for rootfs
-    // endpoint of memory@0 cell has to be adjusted accordingly
     pmem@2896 {
         compatible = "pmem-region";
         reg = <0x4000 0xe5000000 0x0 0x4b000000>;
