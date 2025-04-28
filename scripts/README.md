@@ -43,7 +43,6 @@ L2CPU=0
 PAYLOAD=<path-to-opensbi-fw_payload.bin>
 FS=<path-to-rootfs-img>
 
-tt-smi -r0
 python boot.py --boot --l2cpu $L2CPU --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR
 ```
 
@@ -64,7 +63,6 @@ PAYLOAD=<path-to-opensbi-fw_jump.bin>
 FS=<path-to-rootfs-img>
 KERNEL=<path-to-kernel-image>
 
-tt-smi -r0
 python boot.py --boot --l2cpu $L2CPU --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR
 ```
 
@@ -88,8 +86,6 @@ FS=<path-to-rootfs-img>
 KERNEL=<path-to-kernel-image>
 DTB=<path-to-dtb>
 
-
-tt-smi -r0
 python boot.py --boot --l2cpu $L2CPU --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR --dtb_bin $DTB --dtb_dst $DTB_ADDR 
 
 ```
