@@ -26,6 +26,7 @@
                 compatible = "riscv,cpu-intc";
                 interrupt-controller;
                 #interrupt-cells = <1>;
+                #address-cells = <0>;
             };
         };
         cpu@1 {
@@ -43,6 +44,7 @@
                 compatible = "riscv,cpu-intc";
                 interrupt-controller;
                 #interrupt-cells = <1>;
+                #address-cells = <0>;
             };
         };
         cpu@2 {
@@ -60,6 +62,7 @@
                 compatible = "riscv,cpu-intc";
                 interrupt-controller;
                 #interrupt-cells = <1>;
+                #address-cells = <0>;
             };
         };
         cpu@3 {
@@ -77,6 +80,7 @@
                 compatible = "riscv,cpu-intc";
                 interrupt-controller;
                 #interrupt-cells = <1>;
+                #address-cells = <0>;
             };
         };
 
@@ -158,48 +162,4 @@
         };
 
     };
-
-    
-    pcie@2032200000 {
-        //compatible = "snps,dw-pcie-ecam";
-        compatible = "tt,bh-pcie";
-        #address-cells = <3>;
-        #size-cells = <2>;
-        device_type = "pci";
-        bus-range = <0x0 0x4>;
-        reg = <0x20 0x32200000 0x0 0x100000>,
-                <0x20 0x31600000 0x0 0x100000>;
-        reg-names = "config", "dbi";
-        //ranges =     <0x02000000 0x0  0x0   0x20 0x32400000 0     0x4000>; // 16KB BAR
-        ranges = <0x02000000 0x0    0x0        0x20   0x32400000 0 0x40000000>; // 1GB BAR
-        // dma-ranges = <0x02000000 0x4820 0x30000000 0x4820 0x30000000 0 0x10000000>; // 256MB
-        /*
-        blackhole-thing runs:
-    pcie_tile.configure_inbound_iatu(0, 0, 0x20'3000'0000ULL, 0xFFFF'FFFF);
-
-    The 0x20'0000'0000 part of that lands them in BH's
-        first 4GiB inbound TLB window, which should be aimed at L2CPU address
-        0x4000'0000'0000.  The 3000'0000 part is because the L2CPU's DRAM is at
-        0x4000'3000'0000, but we can't aim the 4GiB inbound TLB window directly
-        at it -- so BH inbound iATU deals with adding this offset.
-    */
-        dma-ranges = <0x02000000 0 0 0x4000 0x30000000 0x0 0xD0000000>;
-        //dma-ranges = <0x02000000 0 0 0x4000 0x30000000 0x0 0x80000000>;
-        #interrupt-cells = <1>;
-        interrupt-parent = <&plic>;
-        interrupts = <6>;
-        interrupt-names = "msi";
-        interrupt-map-mask = <0x0 0x0 0x0 0x7>;
-        interrupt-map = <0x0 0x0 0x0 0x1 &plic 6>;
-    };
-    
-    msi: irqchip@2FFF60000 {
-        compatible = "vendor,msi-catcherX";
-	    // msi_catcher_cntl
-	    // addr: 2FF6_0000 size: 16 bytes
-	    reg = <0x0 0x2FF60000 0 0xF>;
-        interrupt-parent = <&plic>;
-        interrupts = <6>,<7>;
-    };
-
 };
