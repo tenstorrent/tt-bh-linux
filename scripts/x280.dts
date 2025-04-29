@@ -26,6 +26,7 @@
                 compatible = "riscv,cpu-intc";
                 interrupt-controller;
                 #interrupt-cells = <1>;
+                #address-cells = <0>;
             };
         };
         cpu@1 {
@@ -43,6 +44,7 @@
                 compatible = "riscv,cpu-intc";
                 interrupt-controller;
                 #interrupt-cells = <1>;
+                #address-cells = <0>;
             };
         };
         cpu@2 {
@@ -60,6 +62,7 @@
                 compatible = "riscv,cpu-intc";
                 interrupt-controller;
                 #interrupt-cells = <1>;
+                #address-cells = <0>;
             };
         };
         cpu@3 {
@@ -77,6 +80,7 @@
                 compatible = "riscv,cpu-intc";
                 interrupt-controller;
                 #interrupt-cells = <1>;
+                #address-cells = <0>;
             };
         };
 
