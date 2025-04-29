@@ -12,7 +12,9 @@ if [[ $? -ne 0 ]] ; then
 fi
 
 pushd $LINUX
-make CROSS_COMPILE=riscv64-linux-gnu- ARCH=riscv defconfig
+if [ ! -f ".config" ]; then
+  make CROSS_COMPILE=riscv64-linux-gnu- ARCH=riscv defconfig
+fi
 make CROSS_COMPILE=riscv64-linux-gnu- ARCH=riscv -j$(nproc)
 popd
 
