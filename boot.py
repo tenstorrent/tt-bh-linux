@@ -7,35 +7,48 @@ from pyluwen import PciChip
 from tt_smi.tt_smi_backend import pci_board_reset
 import clock
 
+l2cpu_tile_mapping = {
+    0: (8, 3),
+    1: (8, 9),
+    2: (8, 5),
+    3: (8, 7)
+}
+
 def parse_args():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument("--l2cpu", type=int, default=0, help="Which L2CPU")
     parser.add_argument("--boot", action='store_true', help="Boot the core after loading the bin files")
 
     # If using FW_PAYLOAD, set these args for rootfs and opensbi
     parser.add_argument("--rootfs_bin", type=str, required=True, help="Path to rootfs bin file")
-    parser.add_argument("--rootfs_dst", type=str, required=True, help="Destination address for rootfs")
+    parser.add_argument("--rootfs_dst", type=str, nargs="+", required=True, help="list of Destination address for rootfs for each l2cpu")
     parser.add_argument("--opensbi_bin", type=str, required=True, help="Path to opensbi bin file")
-    parser.add_argument("--opensbi_dst", type=str, required=True, help="Destination address for opensbi")
+    parser.add_argument("--opensbi_dst", type=str, nargs="+", required=True, help="list of Destination address for opensbi for each l2cpu")
     
     # If using FW_JUMP with dtb integrated into opensbi, additionally set these kernel args
     parser.add_argument("--kernel_bin", type=str, required=False, help="Path to kernel bin file")
-    parser.add_argument("--kernel_dst", type=str, required=False, help="Destination address for kernel")
+    parser.add_argument("--kernel_dst", type=str, nargs="+", required=False, help="list of Destination address for kernel for each l2cpu")
     
     # If using FW_JUMP without dtb integrated into opensbi, set these dtb args
     # Requires some opensbi patching to work properly
-    parser.add_argument("--dtb_bin", type=str, required=False, help="Path to dtb bin file")
-    parser.add_argument("--dtb_dst", type=str, required=False, help="Destination address for dtb")
+    # The user can pass in a different device tree for each l2cpu here. The number of dtbs bassed here is the number of l2cpus we boot
+    # By default, if the user passes in only 1 value here, we boot l2cpu0 only
+    parser.add_argument("--dtb_bin", type=str, nargs="+", required=False, help="list of path to dtb bin file for each l2cpu")
+    parser.add_argument("--dtb_dst", type=str, nargs="+", required=False, help="list of Destination address for dtb for each l2cpu")
 
     args = parser.parse_args()
+
+    assert len(args.rootfs_dst) == len(args.opensbi_dst) == len(args.kernel_dst) == len(args.dtb_bin) == len(args.dtb_dst), "Length of all vars must be same"
+    assert 1 <= len(args.dtb_bin) <= 4, "There are only 4 l2cpus to boot" 
+
     return args
 
 
-def reset_x280(chip, l2cpu_index):
+def reset_x280(chip, l2cpu_indices):
     reset_unit_base = 0x80030000
     clock.main(0, 200)
     l2cpu_reset_val = chip.axi_read32(reset_unit_base + 0x14) # L2CPU_RESET
-    l2cpu_reset_val |= 1 << (l2cpu_index + 4)
+    for l2cpu_index in l2cpu_indices:
+        l2cpu_reset_val |= 1 << (l2cpu_index + 4)
     chip.axi_write32(reset_unit_base + 0x14, l2cpu_reset_val) # L2CPU_RESET
     chip.axi_read32(reset_unit_base + 0x14) # L2CPU_RESET
     clock.main(0, 1750)
@@ -125,84 +138,87 @@ def main():
     args = parse_args()
     chip = PciChip(0)
     pci_board_reset([0])
-    (l2cpu_noc_x, l2cpu_noc_y) = {
-        0: (8, 3),
-    }[args.l2cpu]
-    l2cpu_base = 0xfffff7fefff10000
+    l2cpus_to_boot = [_ for _ in range(len(args.dtb_bin))]
+    for l2cpu in l2cpus_to_boot:
+        (l2cpu_noc_x, l2cpu_noc_y) = l2cpu_tile_mapping[l2cpu]
+        l2cpu_base = 0xfffff7fefff10000
 
-    # No UART in scrappy
-    # if args.uart:
-    #     uart_init(chip, args.l2cpu)
+        # No UART in scrappy
+        # if args.uart:
+        #     uart_init(chip, args.l2cpu)
 
-    # No pcie RC config needed in scrappy
-    # # Address within PCIe RC tile where config space is visible.
-    # # Need to map a 2MiB TLB window at it.
-    # pcie_config_space_rc_tile = conf_pcie_rc_noc_tlb_data(chip)
-    # print(f"PCIe config space address in RC tile: 0x{pcie_config_space_rc_tile:x}")
-    # pcie_config_space_x280 = conf_l2cpu_noc_tlb_2M(chip, args.l2cpu, 17, 11, 0, pcie_config_space_rc_tile)
-    # print(f"PCIe config space address in L2CPU tile: 0x{pcie_config_space_x280:x}")
-    # pcie_space_x280 = conf_l2cpu_noc_tlb_2M(chip, args.l2cpu, 18, 11, 0, 0)
-    # print(f"PCIe space address in L2CPU tile: 0x{pcie_space_x280:x}")
+        # No pcie RC config needed in scrappy
+        # # Address within PCIe RC tile where config space is visible.
+        # # Need to map a 2MiB TLB window at it.
+        # pcie_config_space_rc_tile = conf_pcie_rc_noc_tlb_data(chip)
+        # print(f"PCIe config space address in RC tile: 0x{pcie_config_space_rc_tile:x}")
+        # pcie_config_space_x280 = conf_l2cpu_noc_tlb_2M(chip, args.l2cpu, 17, 11, 0, pcie_config_space_rc_tile)
+        # print(f"PCIe config space address in L2CPU tile: 0x{pcie_config_space_x280:x}")
+        # pcie_space_x280 = conf_l2cpu_noc_tlb_2M(chip, args.l2cpu, 18, 11, 0, 0)
+        # print(f"PCIe space address in L2CPU tile: 0x{pcie_space_x280:x}")
 
-    # This config can be used if you want to map another dram tile
-    # to either add more memory or put rootfs in one of the tiles
-    # somewhere = conf_l2cpu_noc_tlb_128G(chip, args.l2cpu, 0, 0, 0, 0x0)
-    # print(f"TLB128 entry 0: 0x{somewhere:x}")
+        # This config can be used if you want to map another dram tile
+        # to either add more memory or put rootfs in one of the tiles
+        # somewhere = conf_l2cpu_noc_tlb_128G(chip, args.l2cpu, 0, 0, 0, 0x0)
+        # print(f"TLB128 entry 0: 0x{somewhere:x}")
 
-    opensbi_addr = int(args.opensbi_dst, 16)
-    rootfs_addr = int(args.rootfs_dst, 16)
-    opensbi_bytes = read_bin_file(args.opensbi_bin)
-    rootfs_bytes = read_bin_file(args.rootfs_bin)
-    if args.kernel_dst and args.kernel_bin:
-        kernel_addr = int(args.kernel_dst, 16)
-        kernel_bytes = read_bin_file(args.kernel_bin)
-    
-    if args.dtb_bin and args.dtb_dst:
-        dtb_addr = int(args.dtb_dst, 16)
-        dtb_bytes = read_bin_file(args.dtb_bin)
+        opensbi_addr = int(args.opensbi_dst[l2cpu], 16)
+        rootfs_addr = int(args.rootfs_dst[l2cpu], 16)
+        opensbi_bytes = read_bin_file(args.opensbi_bin)
+        rootfs_bytes = read_bin_file(args.rootfs_bin)
+            
+        if args.kernel_dst and args.kernel_bin:
+            kernel_addr = int(args.kernel_dst[l2cpu], 16)
+            kernel_bytes = read_bin_file(args.kernel_bin)
+        
+        if args.dtb_bin and args.dtb_dst:
+            dtb_addr = int(args.dtb_dst[l2cpu], 16)
+            dtb_bytes = read_bin_file(args.dtb_bin[l2cpu])
 
 
-    # Enable the whole cache when using DRAM
-    L3_REG_BASE=0x02010000
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L3_REG_BASE + 8, 0xf)
-    data = chip.noc_read32(0, l2cpu_noc_x, l2cpu_noc_y, L3_REG_BASE + 8)
+        # Enable the whole cache when using DRAM
+        L3_REG_BASE=0x02010000
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L3_REG_BASE + 8, 0xf)
+        data = chip.noc_read32(0, l2cpu_noc_x, l2cpu_noc_y, L3_REG_BASE + 8)
 
-    print(f"Writing OpenSBI to 0x{opensbi_addr:x}")
-    chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, opensbi_addr, opensbi_bytes)
-    print(f"Writing rootfs to 0x{rootfs_addr:x}")
-    chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, rootfs_addr, rootfs_bytes)
+        print(f"Writing OpenSBI to 0x{opensbi_addr:x}")
+        chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, opensbi_addr, opensbi_bytes)
+        print(f"Writing rootfs to 0x{rootfs_addr:x}")
+        chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, rootfs_addr, rootfs_bytes)
 
-    if args.kernel_dst and args.kernel_bin:
-        print(f"Writing Kernel to 0x{kernel_addr:x}")
-        chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, kernel_addr, kernel_bytes)
-    if args.dtb_dst and args.dtb_bin:
-        print(f"Writing dtb to 0x{dtb_addr:x}")
-        chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, dtb_addr, dtb_bytes)
+        if args.kernel_dst and args.kernel_bin:
+            print(f"Writing Kernel to 0x{kernel_addr:x}")
+            chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, kernel_addr, kernel_bytes)
+        if args.dtb_dst and args.dtb_bin:
+            print(f"Writing dtb to 0x{dtb_addr:x}")
+            chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, dtb_addr, dtb_bytes)
 
-    reset_vector_0 = opensbi_addr & 0xffffffff
-    reset_vector_1 = opensbi_addr >> 32
+        reset_vector_0 = opensbi_addr & 0xffffffff
+        reset_vector_1 = opensbi_addr >> 32
 
-    
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x0, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_0_0
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x4, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_0_1
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x8, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_1_0
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0xC, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_1_1
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x10, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_2_0
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x14, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_2_1
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x18, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_3_0
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x1C, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_3_1
-    # input("Waiting")
+        
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x0, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_0_0
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x4, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_0_1
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x8, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_1_0
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0xC, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_1_1
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x10, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_2_0
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x14, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_2_1
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x18, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_3_0
+        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x1C, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_3_1
+        # input("Waiting")
 
     if args.boot:
-        reset_x280(chip, args.l2cpu)
+        reset_x280(chip, l2cpus_to_boot)
     else:
         print("Not booting (you didn't pass --boot)")
 
-    # Configure L2 prefetchers
-    L2_PREFETCH_BASE=0x02030000
-    for offset in (0x0000, 0x2000, 0x4000, 0x6000):
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L2_PREFETCH_BASE+offset, 0x15811)
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L2_PREFETCH_BASE+4+offset, 0x38c84e)
+    for l2cpu in l2cpus_to_boot:
+        (l2cpu_noc_x, l2cpu_noc_y) = l2cpu_tile_mapping[l2cpu]
+        # Configure L2 prefetchers
+        L2_PREFETCH_BASE=0x02030000
+        for offset in (0x0000, 0x2000, 0x4000, 0x6000):
+            chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L2_PREFETCH_BASE+offset, 0x15811)
+            chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L2_PREFETCH_BASE+4+offset, 0x38c84e)
 
 
 if __name__ == "__main__":
