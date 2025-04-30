@@ -1,0 +1,7 @@
+/x280.dtb
+/Image
+/rootfs.ext4
+/fw_jump.bin
+/opensbi/
+/linux/
+*.swp
