@@ -12,3 +12,5 @@ PAYLOAD=$HOME/opensbi/build/platform/generic/firmware/fw_jump.bin
 FS=$HOME/rootfs.ext4
 
 python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR --dtb_bin $DTB --dtb_dst $DTB_ADDR
+
+blackhole-thing/build/console
