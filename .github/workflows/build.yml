@@ -1,0 +1,46 @@
+name: Tenstorrent Blackhole Linux CI 🐧
+
+on:
+  push:
+  pull_request:
+    branches: [ $default-branch ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -qq just
+        just install_all
+
+    - name: Clone Linux and OpenSBI
+      run: just clone_all
+
+    - name: Load ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: tt
+
+    - name: Build Linux, OpenSBI and device tree
+      run: |
+        export PATH="/usr/lib/ccache:$PATH"
+        just build_all
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: tt-bh-linux
+        path: |
+          Image
+          fw_jump.bin
+          x280.dtb
+
+    - name: Print stats
+      run: |
+        ccache -s
