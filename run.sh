@@ -6,10 +6,9 @@ PAYLOAD_ADDR="0x400030000000"
  KERNEL_ADDR="0x400030200000"
     DTB_ADDR="0x400030100000"
 
-L2CPU=0
 DTB=$PWD/x280.dtb
 KERNEL=$HOME/linux/arch/riscv/boot/Image
 PAYLOAD=$HOME/opensbi/build/platform/generic/firmware/fw_jump.bin
 FS=$HOME/rootfs.ext4
 
-python boot.py --boot --l2cpu $L2CPU --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR --dtb_bin $DTB --dtb_dst $DTB_ADDR
+python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR --dtb_bin $DTB --dtb_dst $DTB_ADDR
