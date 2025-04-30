@@ -10,7 +10,7 @@ help:
 # Recipes that run things
 
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python
-    python3 boot.py --boot --l2cpu 0 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin 0x400030100000 --dtb_dst 0x400030100000 
+    python3 boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin 0x400030100000 --dtb_dst 0x400030100000 
 
 #################################
 # Recipes that build things

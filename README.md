@@ -43,11 +43,10 @@ CROSS_COMPILE=riscv64-linux-gnu- make DEBUG=1 FW_PIC=y FW_PAYLOAD_OFFSET=0x20000
      FS_ADDR="0x4000e5000000"
 PAYLOAD_ADDR="0x400030000000"
 
-L2CPU=0
 PAYLOAD=<path-to-opensbi-fw_payload.bin>
 FS=<path-to-rootfs-img>
 
-python boot.py --boot --l2cpu $L2CPU --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR
+python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR
 ```
 
 2. Running with FW_JUMP, Opensbi has dtb integrated into it, kernel is separate
@@ -62,12 +61,11 @@ CROSS_COMPILE=riscv64-linux-gnu- make DEBUG=1 FW_PIC=y FW_JUMP=y FW_JUMP_OFFSET=
 PAYLOAD_ADDR="0x400030000000"
  KERNEL_ADDR="0x400030200000"
 
-L2CPU=0
 PAYLOAD=<path-to-opensbi-fw_jump.bin>
 FS=<path-to-rootfs-img>
 KERNEL=<path-to-kernel-image>
 
-python boot.py --boot --l2cpu $L2CPU --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR
+python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR
 ```
 
 3. Running with FW_JUMP, Opensbi doesn't have kernel or dtb integrated, both are separate
@@ -86,13 +84,12 @@ PAYLOAD_ADDR="0x400030000000"
  KERNEL_ADDR="0x400030200000"
     DTB_ADDR="0x400030100000"
 
-L2CPU=0
 PAYLOAD=<path-to-opensbi-fw_jump.bin>
 FS=<path-to-rootfs-img>
 KERNEL=<path-to-kernel-image>
 DTB=<path-to-dtb>
 
-python boot.py --boot --l2cpu $L2CPU --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR --dtb_bin $DTB --dtb_dst $DTB_ADDR 
+python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR --dtb_bin $DTB --dtb_dst $DTB_ADDR 
 
 ```
 
