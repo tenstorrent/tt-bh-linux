@@ -2,8 +2,16 @@
 
 export DTS=$PWD/x280.dts
 export DTB=$PWD/x280.dtb
-export LINUX=$HOME/linux
-export SBI=$HOME/opensbi
+
+export BASE_DIR=$HOME
+
+export LINUX_DIR=$BASE_DIR/linux
+export LINUX_REPO=https://github.com/tenstorrent/linux
+export LINUX_BRANCH=master
+
+export SBI_DIR=$BASE_DIR/opensbi
+export SBI_REPO=https://github.com/tenstorrent/opensbi.git
+export SBI_BRANCH=dfustini/wip/tt-bh-linux
 
 dtc $DTS > $DTB
 if [[ $? -ne 0 ]] ; then
@@ -14,7 +22,12 @@ fi
 export CROSS_COMPILE=riscv64-linux-gnu-
 export ARCH=riscv
 
-pushd $LINUX
+if [ ! -d "$LINUX_DIR" ]; then
+  git clone $LINUX_REPO
+fi
+
+pushd $LINUX_DIR
+git checkout $LINUX_BRANCH
 if [ ! -f ".config" ]; then
   make defconfig
   ./scripts/config --enable NONPORTABLE
@@ -24,7 +37,10 @@ fi
 make -j$(nproc)
 popd
 
-pushd $SBI
-CROSS_COMPILE=riscv64-linux-gnu- make FW_PIC=y FW_JUMP=y FW_JUMP_OFFSET=0x200000 FW_JUMP_FDT_OFFSET=0x100000  PLATFORM=generic
-popd
+if [ ! -d "$SBI_DIR" ]; then
+  git clone https://github.com/tenstorrent/opensbi.git
+fi
 
+pushd $SBI_DIR
+git checkout $SBI_BRANCH
+CROSS_COMPILE=riscv64-linux-gnu- make FW_PIC=y FW_JUMP=y FW_JUMP_OFFSET=0x200000 FW_JUMP_FDT_OFFSET=0x100000  PLATFORM=generic
