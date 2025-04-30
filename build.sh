@@ -11,11 +11,17 @@ if [[ $? -ne 0 ]] ; then
     exit 1
 fi
 
+export CROSS_COMPILE=riscv64-linux-gnu-
+export ARCH=riscv
+
 pushd $LINUX
 if [ ! -f ".config" ]; then
-  make CROSS_COMPILE=riscv64-linux-gnu- ARCH=riscv defconfig
+  make defconfig
+  ./scripts/config --enable NONPORTABLE
+  ./scripts/config --enable HVC_RISCV_SBI
+  make olddefconfig
 fi
-make CROSS_COMPILE=riscv64-linux-gnu- ARCH=riscv -j$(nproc)
+make -j$(nproc)
 popd
 
 pushd $SBI
