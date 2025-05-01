@@ -16,7 +16,14 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python
 # Recipes that build things
 
 _linux_configure defconfig: _need_toolchain _need_make _need_linux_tree
-    cd linux && make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- -j $(nproc) {{quiet_make}} {{defconfig}}
+    #!/bin/bash
+    set -exo pipefail
+    export ARCH=riscv
+    export CROSS_COMPILE=riscv64-linux-gnu-
+    cd linux
+    make -j $(nproc) {{quiet_make}} {{defconfig}}
+    ./scripts/config --enable NONPORTABLE --enable HVC_RISCV_SBI
+    make -j $(nproc) {{quiet_make}} olddefconfig
 
 _linux_set_localversion defconfig:
     #!/bin/bash
@@ -123,6 +130,12 @@ clone_all: clone_linux clone_opensbi
 
 # Download Ubuntu server 25.04 pre-installed rootfs
 download_rootfs: _need_unxz
+    #!/bin/bash
+    set -exo pipefail
+    if [ -f rootfs.ext4 ]; then
+        echo "rootfs.ext4 already exists, skipping download."
+        exit 0
+    fi
     wget https://cdimage.ubuntu.com/releases/25.04/release/ubuntu-25.04-preinstalled-server-riscv64.img.xz
     unxz ubuntu-25.04-preinstalled-server-riscv64.img.xz
     mv ubuntu-25.04-preinstalled-server-riscv64.img rootfs.ext4
@@ -142,7 +155,7 @@ download_all: download_rootfs download_prebuilt
 _need_linux: (_need_file 'Image' 'build' 'build_linux or "just download_prebuilt"')
 _need_opensbi: (_need_file 'fw_jump.bin' 'build' 'build_opensbi or "just download_prebuilt"')
 _need_dtb: (_need_file 'x280.dtb' 'build' 'build_dtb or "just download_prebuilt"')
-_need_rootfs: (_need_file 'rootfs.ext4' 'build' 'build_rootfs')
+_need_rootfs: (_need_file 'rootfs.ext4' 'build' 'download_rootfs')
 
 _need_linux_tree: (_need_file 'linux' 'clon' 'clone_linux')
 _need_opensbi_tree: (_need_file 'opensbi' 'clon' 'clone_opensbi')
