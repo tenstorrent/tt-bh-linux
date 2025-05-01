@@ -1,5 +1,6 @@
 all: ioctl.h
 	g++ -O2 console.cpp l2cpu.cpp tile.cpp tlb.cpp -o console
+	g++ -O2 test.cpp l2cpu.cpp tile.cpp tlb.cpp -o test
 
 ioctl.h:
 	@TT_VERSION=$$(modinfo tenstorrent | grep -i ^version | awk '{print $$2}'); \
@@ -13,4 +14,4 @@ ioctl.h:
 	fi
 
 clean:
-	rm -f ioctl.h console
+	rm -f ioctl.h console test
