@@ -1,3 +1,40 @@
+![Tenstorrent Blackhole P150](misc/P150.jpg)
+
+## Tenstorrent Blackhole P100/P150 Linux demo
+
+This is a demo of Linux runnning on the [Tenstorrent Blackhole P100/P150](https://tenstorrent.com/hardware/blackhole) PCIe card using the onboard [SiFive x280](https://www.sifive.com/cores/intelligence-x200-series) cores.
+
+*FIXME: Replace ASCII art below with boot demo animated gif*
+```
+[    4.225945] Freeing unused kernel image (initmem) memory: 3212K
+[    4.255631] Run /init as init process
+
+/ # cat /proc/cpuinfo
+processor       : 0
+hart            : 0
+isa             : rv64imafdc_zicntr_zicsr_zifencei_zihpm
+mmu             : sv48
+mvendorid       : 0x489
+marchid         : 0x8000000000000007
+mimpid          : 0x6220425
+hart isa        : rv64imafdc_zicntr_zicsr_zifencei_zihpm
+/ #
+```
+
+(*Note: This is **not** a Tenstorrent designed CPU such as the high performance [Ascalon](https://tenstorrent.com/en/ip/tt-ascalon) core*)
+
+This demo downloads OpenSBI and Linux binaries, configures them on the Blackhole hardware and
+starts the x280 core to boot.
+
+## Hardware details
+Blackhole has 4 clusters of 4 x280 cores (ie 16 cores total). Each cluster can run as a single coherent SMP. Separate clusters aren't coherent. Each cluster has 4GB of memory attached.
+
+*FIXME: More details*
+
+## Boot flow details
+
+*FIXME: More details*
+
 ## Dependencies
 apt Dependencies for tt-smi and dtc
 ```
