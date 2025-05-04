@@ -84,7 +84,7 @@ clean_downloads:
 # Recipes that install packages
 
 # Install all packages
-install_all: apt_update install_kernel_pkgs install_toolchain_pkgs install_tool_pkgs
+install_all: apt_update install_kernel_pkgs install_toolchain_pkgs install_tool_pkgs install_libs
 
 sudo := 'sudo'
 
@@ -107,6 +107,9 @@ install_qemu: (install 'qemu-system-misc qemu-utils qemu-system-common qemu-syst
 
 # Install tools
 install_tool_pkgs: (install 'device-tree-compiler xz-utils python3 unzip')
+
+# Install libraries for compiling
+install_libs: (install 'libvdeslirp-dev libslirp-dev')
 
 #################################
 # Recipes that clone git trees
