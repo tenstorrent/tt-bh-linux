@@ -1,3 +1,5 @@
+#ifndef TILE_H
+#define TILE_H
 #include <unistd.h>
 #include <cstdint>
 #include <memory>
@@ -38,3 +40,4 @@ public:
     ~Tile() noexcept;
 
 };
+#endif
