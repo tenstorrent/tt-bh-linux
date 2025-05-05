@@ -1,18 +1,6 @@
-// SPDX-FileCopyrightText: © 2025 Tenstorrent Inc.
-// SPDX-License-Identifier: GPL-2.0-only
-
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <unistd.h>
-
-#include <iostream>
-#include <algorithm>
-#include <array>
-#include <memory>
-#include <random>
+#include <cstdint>
 #include <map>
 
-#include "ioctl.h"
 #include "tile.h"
 
 class L2CPU : public Tile
@@ -31,3 +19,6 @@ public:
 
     uint32_t read32_offset(uint64_t addr);
 };
+
+extern std::map<int, xy_t> l2cpu_tile_mapping;
+extern std::map<int, uint64_t> l2cpu_starting_address_mapping;

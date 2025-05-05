@@ -1,21 +1,6 @@
-// SPDX-FileCopyrightText: © 2025 Tenstorrent Inc.
-// SPDX-License-Identifier: GPL-2.0-only
-
-#include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <unistd.h>
-
-#include <iostream>
-#include <algorithm>
-#include <array>
-#include <memory>
-#include <random>
-#include <map>
-
-#include "ioctl.h"
+#include <sys/ioctl.h>
 #include "tlb.h"
-
-
 
 TlbHandle::TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &config)
     : fd(fd)

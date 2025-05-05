@@ -1,18 +1,9 @@
-// SPDX-FileCopyrightText: © 2025 Tenstorrent Inc.
-// SPDX-License-Identifier: GPL-2.0-only
-
-#include <sys/ioctl.h>
-#include <sys/mman.h>
 #include <unistd.h>
-
 #include <cassert>
 #include <cstring>
 #include <iostream>
-#include <algorithm>
-#include <array>
 #include <memory>
-#include <random>
-#include <map>
+#include <vector>
 
 #include "ioctl.h"
 

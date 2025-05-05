@@ -1,19 +1,18 @@
-#include <sys/fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <unistd.h>
-
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
+#include <thread>
 #include <chrono>
 #include <csignal>
-#include <cstring>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/select.h>
 #include <termios.h>
-#include <thread>
 #include <unistd.h>
+#include <sys/select.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
-#include <iostream>
 #include "l2cpu.h"
 
 using le64_t = uint64_t;
