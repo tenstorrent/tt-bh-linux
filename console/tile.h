@@ -1,16 +1,7 @@
-// SPDX-FileCopyrightText: © 2025 Tenstorrent Inc.
-// SPDX-License-Identifier: GPL-2.0-only
-
-#include <sys/ioctl.h>
-#include <sys/mman.h>
 #include <unistd.h>
-
-#include <iostream>
-#include <algorithm>
-#include <array>
+#include <cstdint>
 #include <memory>
-#include <random>
-#include <map>
+#include <vector>
 
 #include "ioctl.h"
 #include "tlb.h"
@@ -39,6 +30,10 @@ public:
     void write32(uint64_t addr, uint32_t value);
     
     uint32_t read32(uint64_t addr);
+
+    void write(uint64_t addr, std::vector<uint8_t>);
+
+    std::vector<uint8_t> read(uint64_t addr, size_t size);
 
     ~Tile() noexcept;
 

@@ -1,19 +1,4 @@
-// SPDX-FileCopyrightText: © 2025 Tenstorrent Inc.
-// SPDX-License-Identifier: GPL-2.0-only
-
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/fcntl.h>
-#include <unistd.h>
-
-#include <iostream>
-#include <algorithm>
-#include <array>
-#include <memory>
-#include <random>
-#include <map>
-#include <vector>
-
+#include <fcntl.h>
 #include "tile.h"
 
 Tile::Tile()
@@ -41,6 +26,16 @@ void Tile::write32(uint64_t addr, uint32_t value) {
 uint32_t Tile::read32(uint64_t addr) {
     TlbWindow2M temporary_window(fd, coordinates.x, coordinates.y, addr);
     return temporary_window.read32(0);
+}
+
+void Tile::write(uint64_t addr, std::vector<uint8_t> value) {
+    TlbWindow4G temporary_window(fd, coordinates.x, coordinates.y, addr);
+    temporary_window.write(0, value);
+}
+
+std::vector<uint8_t> Tile::read(uint64_t addr, size_t size) {
+    TlbWindow4G temporary_window(fd, coordinates.x, coordinates.y, addr);
+    return temporary_window.read(0, size);
 }
 
 /*

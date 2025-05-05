@@ -5,6 +5,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include <cassert>
+#include <cstring>
 #include <iostream>
 #include <algorithm>
 #include <array>
@@ -57,6 +59,10 @@ public:
     
     uint32_t read32(uint64_t addr);
 
+    void write(uint64_t addr, const std::vector<uint8_t> value); // Write bytes
+
+    std::vector<uint8_t> read(uint64_t addr, size_t size); // Read bytes
+
     uint8_t* get_window();
 
     uint64_t get_offset();
@@ -67,7 +73,7 @@ template <size_t WINDOW_SIZE>
 TlbWindow<WINDOW_SIZE>::TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr)
 : offset(addr & WINDOW_MASK)
 {
-    std::cout<<"Addr 0x"<<std::hex<<addr<<"\n";
+    std::cout<<"Addr 0x"<<std::hex<<addr<<"\n"<<std::dec;
     tenstorrent_noc_tlb_config config{
         .addr = addr & ~WINDOW_MASK,
         .x_end = x,
@@ -80,21 +86,18 @@ TlbWindow<WINDOW_SIZE>::TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr)
 template <size_t WINDOW_SIZE>
 void TlbWindow<WINDOW_SIZE>::write32(uint64_t addr, uint32_t value) 
 {
-    // if (addr & 3)
-    //     THROW_TEST_FAILURE("Misaligned write");
-
-    void *ptr = window->data() + offset + addr;
-    *reinterpret_cast<volatile uint32_t *>(ptr) = value;
+    std::vector<uint8_t> vec(4);
+    std::memcpy(vec.data(), reinterpret_cast<uint8_t*>(value), 4);
+    write(addr, vec);
 }
 
 template <size_t WINDOW_SIZE>
 uint32_t TlbWindow<WINDOW_SIZE>::read32(uint64_t addr)
 {
-    // if (addr & 3)
-    //     THROW_TEST_FAILURE("Misaligned read");
-
-    void *ptr = window->data() + offset + addr;
-    return *reinterpret_cast<volatile uint32_t *>(ptr);
+    uint32_t result;
+    std::vector<uint8_t> vec = read(addr, 4);
+    std::memcpy(reinterpret_cast<uint8_t*>(&result), vec.data(), 4);
+    return result;
 }
 
 template <size_t WINDOW_SIZE>
@@ -105,6 +108,24 @@ uint8_t* TlbWindow<WINDOW_SIZE>::get_window(){
 template <size_t WINDOW_SIZE>
 uint64_t TlbWindow<WINDOW_SIZE>::get_offset(){
     return offset;
+}
+
+template <size_t WINDOW_SIZE>
+void TlbWindow<WINDOW_SIZE>::write(uint64_t addr, const std::vector<uint8_t> value){
+    assert(offset + addr + value.size() <= WINDOW_SIZE);
+    uint8_t *ptr = window.get()->data() + offset + addr;
+    const uint8_t *src = reinterpret_cast<const uint8_t*>(value.data());
+    std::memcpy(ptr, src, value.size());
+}
+
+template <size_t WINDOW_SIZE>
+std::vector<uint8_t> TlbWindow<WINDOW_SIZE>::read(uint64_t addr, size_t size){
+    assert(offset + addr + size <= WINDOW_SIZE);
+    std::vector<uint8_t> result(size);
+    uint8_t *ptr = window.get()->data() + offset + addr;
+    uint8_t *dst = reinterpret_cast<uint8_t*>(result.data());
+    std::memcpy(dst, ptr, size);
+    return result;
 }
 
 using TlbWindow2M = TlbWindow<TWO_MEG>;
