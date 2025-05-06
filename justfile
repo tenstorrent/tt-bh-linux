@@ -112,7 +112,7 @@ install_tool_pkgs: (install 'device-tree-compiler xz-utils python3 unzip')
 # Recipes that clone git trees
 
 _clone repo:
-    git clone --depth 1 --b tt-blackhole {{repo}}
+    git clone --depth 1 -b tt-blackhole {{repo}}
 
 # Clone the Linux kernel source tree
 clone_linux: (_clone 'https://github.com/tenstorrent/linux')
