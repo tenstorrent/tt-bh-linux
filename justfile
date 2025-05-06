@@ -21,9 +21,7 @@ _linux_configure defconfig: _need_toolchain _need_make _need_linux_tree
     export ARCH=riscv
     export CROSS_COMPILE=riscv64-linux-gnu-
     cd linux
-    make -j $(nproc) {{quiet_make}} {{defconfig}}
-    ./scripts/config --enable NONPORTABLE --enable HVC_RISCV_SBI
-    make -j $(nproc) {{quiet_make}} olddefconfig
+    make -j $(nproc) {{quiet_make}} blackhole_defconfig
 
 _linux_set_localversion defconfig:
     #!/bin/bash
@@ -114,7 +112,7 @@ install_tool_pkgs: (install 'device-tree-compiler xz-utils python3 unzip')
 # Recipes that clone git trees
 
 _clone repo:
-    git clone --depth 1 {{repo}}
+    git clone --depth 1 -b tt-blackhole {{repo}}
 
 # Clone the Linux kernel source tree
 clone_linux: (_clone 'https://github.com/tenstorrent/linux')
