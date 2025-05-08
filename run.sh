@@ -9,19 +9,19 @@ PAYLOAD_ADDR="0x400030000000"
 DTB=$PWD/x280.dtb
 KERNEL=$PWD/linux/arch/riscv/boot/Image
 PAYLOAD=$PWD/opensbi/build/platform/generic/firmware/fw_jump.bin
-FS=$PWD/rootfs.ext4
-CONSOLE=blackhole-thing/build/console
+FS=$PWD/rootfs/rootfs.ext4
+CONSOLE=console/console
 
-python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR --dtb_bin $DTB --dtb_dst $DTB_ADDR
+if [ ! -f "$FS" ]; then
+  git clone https://github.com/tt-fustini/rootfs
+fi
 
 if [ ! -f "$CONSOLE" ]; then
-  pushd blackhole-thing
-  mkdir build
-  pushd build
-  cmake ..
+  pushd console
   make
-  popd
   popd
 fi
 
-echo $CONSOLE
+python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR --dtb_bin $DTB --dtb_dst $DTB_ADDR
+
+$CONSOLE
