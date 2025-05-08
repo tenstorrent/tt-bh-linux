@@ -6,12 +6,20 @@ import os
 from pyluwen import PciChip
 from tt_smi.tt_smi_backend import pci_board_reset
 import clock
+import time
 
 l2cpu_tile_mapping = {
     0: (8, 3),
     1: (8, 9),
     2: (8, 5),
     3: (8, 7)
+}
+
+l2cpu_gddr_enable_bit_mapping = {
+    0: 5, # L2CPU0 is attached to tt_gddr6_ss_even_inst[2]
+    1: 6, # L2CPU1 is attached to tt_gddr6_ss_odd_inst[3]
+    2: 7, # L2CPU2 is attached to tt_gddr6_ss_even_inst[3]
+    3: 7  # L2CPU3 is attached to tt_gddr6_ss_even_inst[3]
 }
 
 def parse_args():
@@ -23,11 +31,11 @@ def parse_args():
     parser.add_argument("--rootfs_dst", type=str, nargs="+", required=True, help="list of Destination address for rootfs for each l2cpu")
     parser.add_argument("--opensbi_bin", type=str, required=True, help="Path to opensbi bin file")
     parser.add_argument("--opensbi_dst", type=str, nargs="+", required=True, help="list of Destination address for opensbi for each l2cpu")
-    
+
     # If using FW_JUMP with dtb integrated into opensbi, additionally set these kernel args
     parser.add_argument("--kernel_bin", type=str, required=False, help="Path to kernel bin file")
     parser.add_argument("--kernel_dst", type=str, nargs="+", required=False, help="list of Destination address for kernel for each l2cpu")
-    
+
     # If using FW_JUMP without dtb integrated into opensbi, set these dtb args
     # Requires some opensbi patching to work properly
     # The user can pass in a different device tree for each l2cpu here. The number of dtbs bassed here is the number of l2cpus we boot
@@ -139,6 +147,14 @@ def main():
     chip = PciChip(0)
     pci_board_reset([0])
     l2cpus_to_boot = [_ for _ in range(len(args.dtb_bin))]
+
+    time.sleep(1) # Sleep 1s, telemetry sometimes not available immediately after reset
+    telemetry = chip.get_telemetry()
+    enabled_l2cpu = telemetry.enabled_l2cpu
+    enabled_gddr = telemetry.enabled_gddr
+    for l2cpu in l2cpus_to_boot:
+        assert (enabled_l2cpu >> l2cpu) & 1, "L2CPU {} is harvested".format(l2cpu)
+        assert (enabled_gddr >> l2cpu_gddr_enable_bit_mapping[l2cpu]) & 1, "DRAM attached to L2CPU {} is harvested".format(l2cpu)
     for l2cpu in l2cpus_to_boot:
         (l2cpu_noc_x, l2cpu_noc_y) = l2cpu_tile_mapping[l2cpu]
         l2cpu_base = 0xfffff7fefff10000
