@@ -1,6 +1,6 @@
 ![Tenstorrent Blackhole P150](misc/P150.jpg)
 
-## Tenstorrent Blackhole P100/P150 Linux demo
+# Tenstorrent Blackhole P100/P150 Linux demo
 
 This is a demo of Linux runnning on the [Tenstorrent Blackhole P100/P150](https://tenstorrent.com/hardware/blackhole) PCIe card using the onboard [SiFive x280](https://www.sifive.com/cores/intelligence-x200-series) cores.
 
@@ -58,7 +58,9 @@ Blackhole has 4 clusters of 4 x280 cores (ie 16 cores total). Each cluster can r
 
 *FIXME: More details*
 
-## Dependencies
+## Build and boot Linux
+
+### Dependencies
 apt Dependencies for tt-smi and dtc
 ```
 sudo apt install -y python3-venv cargo rustc device-tree-compiler
@@ -73,25 +75,39 @@ tt-smi/.venv/bin/pip install ./tt-smi
 
 luwen is installed as part of tt-smi
 
-## Before Running Scripts
+### Before Running Scripts
 Activate tt-smi env before running script
 ```
 source tt-smi/.venv/bin/activate
 ```
+Install the `just` package if it exists on your distro, or run the following script:
+```
+./get_just.sh 
+```
 
-## Device Tree
+### Build Linux and OpenSBI
+```
+just build_all
+```
+
+### Boot Linux
+```
+./run.sh
+```
+This will launch a console application.  Default login is `root`/`root`.  Quit with `Ctrl-A`.
+
+
+## Additional information
+
+### Device Tree
 Sample device tree provided at `x280.dts`. This uses 2896MB of memory for the
 host and the remaining 1200MB for the rootfs. The values in the next section
 hence assume we're putting the rootfs at 0x4000e5000000 (which is
 0x400030000000 + 2896MB)
 
-There's probably a lot of junk in this device tree, I copied it from something
-@drew wrote up.
-
 Compiling device tree `dtc x280.dts > x280.dtb`
 
-
-## Different methods of booting
+### Different methods of booting
 1. Running with FW_PAYLOAD, Opensbi has kernel and dtb integrated into it
 Opensbi compiled with these args
 ```
