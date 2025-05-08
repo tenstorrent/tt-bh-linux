@@ -1,0 +1,77 @@
+name: Tenstorrent Blackhole Linux release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -qq just
+        just install_all
+
+    - name: Clone Linux and OpenSBI
+      run: just clone_all
+
+    - name: Load ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: tt
+
+    - name: Build Linux, OpenSBI and device tree
+      run: |
+        export PATH="/usr/lib/ccache:$PATH"
+        just build_all
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: tt-bh-linux
+        path: |
+          Image
+          fw_jump.bin
+          x280.dtb
+
+    - name: Print stats
+      run: |
+        ccache -s
+
+  create_release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      
+      - name: Download tt-bh-linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tt-bh-linux
+          path: |
+            Image
+            fw_jump.bin
+            x280.dtb
+      
+      - name: Upload packages to release
+        run: |
+          find . -type f -name "Image" -o -name "fw_jump.bin" -o -name "x280.dtb" | xargs -I{} gh release upload ${{ github.ref_name }} {}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
