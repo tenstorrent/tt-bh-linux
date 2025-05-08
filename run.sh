@@ -9,11 +9,11 @@ PAYLOAD_ADDR="0x400030000000"
 DTB=$PWD/x280.dtb
 KERNEL=$PWD/linux/arch/riscv/boot/Image
 PAYLOAD=$PWD/opensbi/build/platform/generic/firmware/fw_jump.bin
-FS=$PWD/rootfs/rootfs.ext4
+FS=$PWD/rootfs.ext4
 CONSOLE=console/console
 
 if [ ! -f "$FS" ]; then
-  git clone https://github.com/tt-fustini/rootfs
+  wget -O $FS https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img
 fi
 
 if [ ! -f "$CONSOLE" ]; then
