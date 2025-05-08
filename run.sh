@@ -24,4 +24,4 @@ if [ ! -f "$CONSOLE" ]; then
   popd
 fi
 
-$CONSOLE
+echo $CONSOLE
