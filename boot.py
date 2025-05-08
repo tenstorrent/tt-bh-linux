@@ -25,6 +25,7 @@ l2cpu_gddr_enable_bit_mapping = {
 def parse_args():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--boot", action='store_true', help="Boot the core after loading the bin files")
+    parser.add_argument("--l2cpu", type=int, nargs="+", default=[0], help="list of L2CPUs to boot")
 
     # If using FW_PAYLOAD, set these args for rootfs and opensbi
     parser.add_argument("--rootfs_bin", type=str, required=True, help="Path to rootfs bin file")
@@ -45,8 +46,9 @@ def parse_args():
 
     args = parser.parse_args()
 
-    assert len(args.rootfs_dst) == len(args.opensbi_dst) == len(args.kernel_dst) == len(args.dtb_bin) == len(args.dtb_dst), "Length of all vars must be same"
-    assert 1 <= len(args.dtb_bin) <= 4, "There are only 4 l2cpus to boot" 
+    assert len(args.l2cpu) == len(args.rootfs_dst) == len(args.opensbi_dst) == len(args.kernel_dst) == len(args.dtb_bin) == len(args.dtb_dst), "Length of all vars must be same"
+    for l2cpu in args.l2cpu:
+        assert 0 <= l2cpu < 4, "l2cpu IDs must be in [0, 1, 2, 3]"
 
     return args
 
@@ -144,9 +146,9 @@ def uart_init(chip, l2cpu_index):
 
 def main():
     args = parse_args()
+    l2cpus_to_boot = args.l2cpu
     chip = PciChip(0)
     pci_board_reset([0])
-    l2cpus_to_boot = [_ for _ in range(len(args.dtb_bin))]
 
     time.sleep(1) # Sleep 1s, telemetry sometimes not available immediately after reset
     telemetry = chip.get_telemetry()
