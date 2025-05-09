@@ -1,7 +1,6 @@
 all: ioctl.h
-	g++ -O2 console.cpp l2cpu.cpp tlb.cpp -o console
 	g++ -O2 test.cpp l2cpu.cpp tlb.cpp -o test
-	g++ -O2 network.cpp l2cpu.cpp tlb.cpp -pthread -Wall -lvdeslirp -lslirp -o network
+	g++ -O2 tt-bh-linux.cpp network.hpp console.hpp l2cpu.cpp tlb.cpp -pthread -Wall -lvdeslirp -lslirp -o tt-bh-linux
 
 ioctl.h:
 	@TT_VERSION=$$(modinfo tenstorrent | grep -i ^version | awk '{print $$2}'); \
@@ -15,4 +14,4 @@ ioctl.h:
 	fi
 
 clean:
-	rm -f ioctl.h console test network
+	rm -f ioctl.h test tt-bh-linux

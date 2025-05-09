@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cassert>
 #include <getopt.h>
+#include <atomic>
 
 #include "l2cpu.h"
 #include "libvdeslirp.h"
@@ -21,9 +22,9 @@
 #define X280_REGISTERS 0xFFFFF7FEFFF10000ULL
 #define INTERRUPT_NUMBER 33
 
-#define BUFFER_SIZE 500
+#define NETWORK_BUFFER_SIZE 500
 
-#define MAGIC 0x4D13ED8246A0f856ULL
+#define TTETH_MAGIC 0x4D13ED8246A0f856ULL
 
 struct packet{
     uint32_t len;
@@ -33,7 +34,7 @@ struct packet{
 struct one_side_buffer{
     uint32_t location_sent;
     uint32_t location_rcvd;
-    struct packet buffer[BUFFER_SIZE];
+    struct packet buffer[NETWORK_BUFFER_SIZE];
 };
 
 struct shared_data{
@@ -44,7 +45,7 @@ struct shared_data{
 };
 
 
-int run_once(int l2cpu_idx){
+int network_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag){
 
     L2CPU l2cpu(l2cpu_idx);
 
@@ -89,9 +90,9 @@ int run_once(int l2cpu_idx){
     // Unused variable, might use it for something in the future so leaving it around
     // bool irq_asserted = false;
 
-    while (true){
-        if (base->magic != MAGIC) {
-            printf("Magic was %" PRIu64 ", not %lld trying again\n", base->magic, MAGIC);
+    while (!exit_thread_flag){
+        if (base->magic != TTETH_MAGIC) {
+            printf("Magic was %" PRIu64 ", not %lld trying again\n", base->magic, TTETH_MAGIC);
             break;
         }
         struct timeval tv;
@@ -107,7 +108,7 @@ int run_once(int l2cpu_idx){
             base->interrupts=0;
         }
         ret_code = select(slirp_fd + 1, &rfds, NULL, NULL, &tv);
-        if ((send->location_rcvd != ((send->location_sent + 1)%BUFFER_SIZE)) && ret_code > 0){
+        if ((send->location_rcvd != ((send->location_sent + 1)%NETWORK_BUFFER_SIZE)) && ret_code > 0){
             len = vdeslirp_recv(myslirp, buf, PACKET_SIZE);
 
             uint32_t location_sent = send->location_sent;
@@ -119,7 +120,7 @@ int run_once(int l2cpu_idx){
             // Memory barrier to ensure data is written before updating the pointer
             __sync_synchronize();
 
-            send->location_sent = (location_sent + 1) % BUFFER_SIZE; // pointer to data
+            send->location_sent = (location_sent + 1) % NETWORK_BUFFER_SIZE; // pointer to data
             // Set the (Interrupt_number -5)th bit in the X280_Global_Interrupts_31_0 register to trigger an interrupt
             // Something about first 6 interrupts being reserved for other uses
             if(base->interrupts==0){
@@ -137,7 +138,7 @@ int run_once(int l2cpu_idx){
             // Memory barrier to ensure data is read before updating the pointer
             __sync_synchronize();
 
-            recv->location_rcvd = (location_rcvd + 1)%BUFFER_SIZE;
+            recv->location_rcvd = (location_rcvd + 1)%NETWORK_BUFFER_SIZE;
 
             ret_code = vdeslirp_send(myslirp, buf, len);
             if (ret_code < 0){
@@ -152,51 +153,51 @@ int run_once(int l2cpu_idx){
     return 0;
 }
 
-int main(int argc, char **argv){
-    int l2cpu=0;
-    const char* const short_opts = "l:h";
-    const option long_opts[] = {
-            {"l2cpu", required_argument, nullptr, 'l'},
-            {"help", no_argument, nullptr, 'h'},
-            {nullptr, no_argument, nullptr, 0}
-    };
-
-    while (true)
-    {
-        const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
-
-        if (-1 == opt)
-            break;
-
-        switch (opt)
-        {
-        case 'l':
-            l2cpu = std::stoi(optarg);
-            break;
-
-        case 'h': // -h or --help
-        case '?': // Unrecognized option
-        default:
-            std::cout <<
-            "--l2cpu <l>:         L2CPU to attach to\n"
-            "--help:              Show help\n";
-            exit(1);
-        }
-    }
-
-    if (l2cpu < 0 || l2cpu > 3){
-        std::cerr<<"l2cpu must be one of 0,1,2,3"<<"\n";
-        exit(1);
-    }
-
-    while (true){
-        /*
-        We call run_once in a loop
-        If the chip resets or the MAGIC value disappears,
-        we sleep for a bit and try setting everything up again
-        */
-        run_once(l2cpu);
-        std::cout<<"Sleeping for a bit and trying again"<<"\n";
-        usleep(100000);
-    }
-}
+//int main(int argc, char **argv){
+//    int l2cpu=0;
+//    const char* const short_opts = "l:h";
+//    const option long_opts[] = {
+//            {"l2cpu", required_argument, nullptr, 'l'},
+//            {"help", no_argument, nullptr, 'h'},
+//            {nullptr, no_argument, nullptr, 0}
+//    };
+//
+//    while (true)
+//    {
+//        const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
+//
+//        if (-1 == opt)
+//            break;
+//
+//        switch (opt)
+//        {
+//        case 'l':
+//            l2cpu = std::stoi(optarg);
+//            break;
+//
+//        case 'h': // -h or --help
+//        case '?': // Unrecognized option
+//        default:
+//            std::cout <<
+//            "--l2cpu <l>:         L2CPU to attach to\n"
+//            "--help:              Show help\n";
+//            exit(1);
+//        }
+//    }
+//
+//    if (l2cpu < 0 || l2cpu > 3){
+//        std::cerr<<"l2cpu must be one of 0,1,2,3"<<"\n";
+//        exit(1);
+//    }
+//
+//    while (true){
+//        /*
+//        We call run_once in a loop
+//        If the chip resets or the MAGIC value disappears,
+//        we sleep for a bit and try setting everything up again
+//        */
+//        run_once(l2cpu);
+//        std::cout<<"Sleeping for a bit and trying again"<<"\n";
+//        usleep(100000);
+//    }
+//}

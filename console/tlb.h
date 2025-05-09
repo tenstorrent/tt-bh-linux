@@ -1,3 +1,5 @@
+#ifndef TLB_H
+#define TLB_H
 #include <unistd.h>
 #include <iostream>
 #include <memory>
@@ -46,4 +48,4 @@ public:
 
     uint8_t* get_window();
 };
-
+#endif

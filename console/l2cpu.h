@@ -1,5 +1,7 @@
-#include <memory>
+#ifndef L2CPU_H
+#define L2CPU_H
 #include <vector>
+#include <memory>
 #include <map>
 
 #include "ioctl.h"
@@ -33,3 +35,4 @@ public:
 };
 const extern std::map<int, xy_t> l2cpu_tile_mapping;
 const extern std::map<int, uint64_t> l2cpu_starting_address_mapping, l2cpu_memory_size_mapping;
+#endif
