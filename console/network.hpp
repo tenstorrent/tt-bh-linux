@@ -60,6 +60,8 @@ int network_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag){
     // Only interrupts 0->5 are reserved, don't know if 6->9 are also connected to something else
     // Interrupts are triggered by setting bit INTERRUPT_NUMBER-5 in the register referenced above
     assert(INTERRUPT_NUMBER >= 10 && INTERRUPT_NUMBER <= 36);
+    auto interrupt_address_window = l2cpu.get_persistent_2M_tlb_window(interrupt_address);
+    uint32_t* interrupt_register = reinterpret_cast<uint32_t*>(interrupt_address_window->get_window());
 
     memset(&(base->send), 0, sizeof(struct one_side_buffer));
     memset(&(base->recv), 0, sizeof(struct one_side_buffer));
@@ -103,7 +105,7 @@ int network_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag){
         tv.tv_usec = 1;
 
         if (base->interrupts == 1){
-            l2cpu.write32(interrupt_address, l2cpu.read32(interrupt_address) & ~(1 << (INTERRUPT_NUMBER - 5)));
+            *interrupt_register = (*interrupt_register) & ~(1 << (INTERRUPT_NUMBER - 5));
             // irq_asserted = false;
             base->interrupts=0;
         }
@@ -124,7 +126,7 @@ int network_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag){
             // Set the (Interrupt_number -5)th bit in the X280_Global_Interrupts_31_0 register to trigger an interrupt
             // Something about first 6 interrupts being reserved for other uses
             if(base->interrupts==0){
-                l2cpu.write32(interrupt_address, (1 << (INTERRUPT_NUMBER - 5)));
+                *interrupt_register = (1 << (INTERRUPT_NUMBER - 5));
                 // irq_asserted = true;
             }
         }
