@@ -13,6 +13,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <atomic>
 
 #include "l2cpu.h"
 
@@ -69,8 +70,6 @@ static inline char pop_char(volatile queues* q)
     return c;
 }
 
-bool running = true;
-
 class TerminalRawMode
 {
     struct termios orig_termios;
@@ -113,7 +112,7 @@ struct debug_descriptor {
 };
 
 
-int uart_loop(int l2cpu_idx) {
+int uart_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag) {
 
     L2CPU l2cpu(l2cpu_idx);
 
@@ -144,7 +143,7 @@ int uart_loop(int l2cpu_idx) {
     TerminalRawMode raw_mode;
     bool ctrl_a_pressed = false;
 
-    while (running) {
+    while (! exit_thread_flag) {
         if (le64toh(q->magic) != VIRTUAL_UART_MAGIC) {
             return -EAGAIN;
         }
@@ -163,7 +162,6 @@ int uart_loop(int l2cpu_idx) {
             if (read(STDIN_FILENO, &input, 1) > 0) {
                 if (ctrl_a_pressed) {
                     if (input == 'x') {
-                        running = false;
                         printf("\n\n");
                         break;
                     }
@@ -187,60 +185,60 @@ int uart_loop(int l2cpu_idx) {
     return 0;
 }
 
-int main(int argc, char **argv)
-{
-    int l2cpu=0;
-    const char* const short_opts = "l:h";
-    const option long_opts[] = {
-            {"l2cpu", required_argument, nullptr, 'l'},
-            {"help", no_argument, nullptr, 'h'},
-            {nullptr, no_argument, nullptr, 0}
-    };
-
-    while (true)
-    {
-        const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
-
-        if (-1 == opt)
-            break;
-
-        switch (opt)
-        {
-        case 'l':
-            l2cpu = std::stoi(optarg);
-            break;
-
-        case 'h': // -h or --help
-        case '?': // Unrecognized option
-        default:
-            std::cout <<
-            "--l2cpu <l>:         L2CPU to attach to\n"
-            "--help:              Show help\n";
-            exit(1);
-        }
-    }
-
-    if (l2cpu < 0 || l2cpu > 3){
-        std::cerr<<"l2cpu must be one of 0,1,2,3"<<"\n";
-        exit(1);
-    }
-
-    printf("Press Ctrl-A x to exit.\n\n");
-    while (running) {
-        try {
-            int r = uart_loop(l2cpu);
-            if (r == -EAGAIN) {
-                printf("Error (UART vanished) -- was the chip reset?  Retrying...\n");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            } else {
-                return r;
-            }
-        } catch (const std::exception& e) {
-            printf("Error (%s) -- was the chip reset?  Retrying...\n", e.what());
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-    }
-
-    printf("Exiting...\n");
-    return 0;
-}
+//int main(int argc, char **argv)
+//{
+//    int l2cpu=0;
+//    const char* const short_opts = "l:h";
+//    const option long_opts[] = {
+//            {"l2cpu", required_argument, nullptr, 'l'},
+//            {"help", no_argument, nullptr, 'h'},
+//            {nullptr, no_argument, nullptr, 0}
+//    };
+//
+//    while (true)
+//    {
+//        const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
+//
+//        if (-1 == opt)
+//            break;
+//
+//        switch (opt)
+//        {
+//        case 'l':
+//            l2cpu = std::stoi(optarg);
+//            break;
+//
+//        case 'h': // -h or --help
+//        case '?': // Unrecognized option
+//        default:
+//            std::cout <<
+//            "--l2cpu <l>:         L2CPU to attach to\n"
+//            "--help:              Show help\n";
+//            exit(1);
+//        }
+//    }
+//
+//    if (l2cpu < 0 || l2cpu > 3){
+//        std::cerr<<"l2cpu must be one of 0,1,2,3"<<"\n";
+//        exit(1);
+//    }
+//
+//    printf("Press Ctrl-A x to exit.\n\n");
+//    while (running) {
+//        try {
+//            int r = uart_loop(l2cpu);
+//            if (r == -EAGAIN) {
+//                printf("Error (UART vanished) -- was the chip reset?  Retrying...\n");
+//                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//            } else {
+//                return r;
+//            }
+//        } catch (const std::exception& e) {
+//            printf("Error (%s) -- was the chip reset?  Retrying...\n", e.what());
+//            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//        }
+//    }
+//
+//    printf("Exiting...\n");
+//    return 0;
+//}
