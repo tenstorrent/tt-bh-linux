@@ -16,15 +16,15 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python
 # Recipes that build things
 
 _linux_configure defconfig: _need_toolchain _need_make _need_linux_tree
-    #!/bin/bash
+    #!/bin/bash -t
     set -exo pipefail
     export ARCH=riscv
     export CROSS_COMPILE=riscv64-linux-gnu-
     cd linux
-    make -j $(nproc) {{quiet_make}} blackhole_defconfig
+    make -j $(nproc) {{quiet_make}} {{defconfig}}
 
 _linux_set_localversion defconfig:
-    #!/bin/bash
+    #!/bin/bash -t
     if [ -n "${CI_JOB_ID:-}" ]; then
         suffix="ci$CI_JOB_ID";
     else
@@ -37,8 +37,9 @@ _linux_set_localversion defconfig:
     cd linux && ./scripts/config --file .config --set-str LOCALVERSION "-$localversion"
 
 # Build the kernel
-build_linux config='defconfig': (_linux_configure config) (_linux_set_localversion config) _need_toolchain _need_make
-    cd linux && make ARCH="riscv" CROSS_COMPILE="riscv64-linux-gnu-" -j $(nproc) {{quiet_make}}
+build_linux config='blackhole_defconfig': (_linux_configure config) (_linux_set_localversion config) _need_toolchain _need_make
+    echo {{config}}
+    cd linux && make ARCH="riscv" CROSS_COMPILE="riscv64-linux-gnu-" -j6 {{quiet_make}}
     ln -f linux/arch/riscv/boot/Image Image
 
 # Build opensbi
