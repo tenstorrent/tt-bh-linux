@@ -21,6 +21,7 @@ _linux_configure defconfig: _need_toolchain _need_make _need_linux_tree
     export ARCH=riscv
     export CROSS_COMPILE=riscv64-linux-gnu-
     cd linux
+    echo make -j $(nproc) {{quiet_make}} {{defconfig}}
     make -j $(nproc) {{quiet_make}} {{defconfig}}
 
 _linux_set_localversion defconfig:
@@ -39,6 +40,7 @@ _linux_set_localversion defconfig:
 # Build the kernel
 build_linux config='blackhole_defconfig': (_linux_configure config) (_linux_set_localversion config) _need_toolchain _need_make
     echo {{config}}
+    echo 'cd linux && make ARCH="riscv" CROSS_COMPILE="riscv64-linux-gnu-" -j6 {{quiet_make}}'
     cd linux && make ARCH="riscv" CROSS_COMPILE="riscv64-linux-gnu-" -j6 {{quiet_make}}
     ln -f linux/arch/riscv/boot/Image Image
 
