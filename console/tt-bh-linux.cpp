@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <atomic>
+#include <mutex> // Added for std::mutex
 #include "console.hpp"
+#include "disk.hpp"
 #include "network.hpp"
 
 std::atomic<bool> exit_thread_flag{false};
+std::mutex interrupt_register_lock; // Global mutex for MMIO access
 
 void console_main(int l2cpu){
     printf("Press Ctrl-A x to exit.\n\n");
@@ -26,9 +29,20 @@ void console_main(int l2cpu){
     }
 }
 
+void disk_main(int l2cpu){
+    while (!exit_thread_flag){
+        VirtioBlk device(l2cpu, exit_thread_flag, interrupt_register_lock);
+        device.device_setup();
+        device.device_loop();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
 void network_main(int l2cpu){
     while (!exit_thread_flag){
-      network_loop(l2cpu, exit_thread_flag);
+        VirtioNet device(l2cpu, exit_thread_flag, interrupt_register_lock);
+        device.device_setup();
+        device.device_loop();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
@@ -70,8 +84,10 @@ int main(int argc, char **argv){
         exit(1);
     }
 
-  std::thread console_thread(console_main, l2cpu);
+//   std::thread console_thread(console_main, l2cpu);
+  std::thread disk_thread(disk_main, l2cpu);
   std::thread network_thread(network_main, l2cpu);
-  console_thread.join();
+//   console_thread.join();
+  disk_thread.join();
   network_thread.join();
 }
