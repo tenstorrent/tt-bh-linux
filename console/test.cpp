@@ -40,8 +40,23 @@ void TestL2CPUNocNodeID(){
     }
 }
 
+void TestMemoryPtr(){
+    for (int i=0; i<4; i++){
+        L2CPU l2cpu(i);
+        std::uniform_int_distribution<uint64_t> distribution(0, l2cpu.get_memory_size());
+        uint64_t starting_address = l2cpu.get_starting_address();
+        uint8_t *memory = l2cpu.get_memory_ptr();
+        for (int i=0; i< 100; i++){
+            uint64_t random_address = distribution(gen);
+            random_address -= (random_address % 4); // Align address to 4 bytes
+            assert(l2cpu.read32(starting_address + random_address) == *(reinterpret_cast<uint32_t*>(memory + random_address)));
+        }
+    }
+}
+
 int main(){
     TestL2CPU23SharedMemoryTile();
     TestL2CPUNocNodeID();
+    TestMemoryPtr();
     return 0;
 }

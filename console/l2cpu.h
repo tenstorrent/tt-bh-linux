@@ -17,6 +17,11 @@ class L2CPU
     int idx;
     uint64_t starting_address, memory_size;
 
+    // ptrs to first (0x4000'0000'0000) and second (0x4001'0000'0000) memory regions of L2CPU memory
+    std::unique_ptr<TlbWindow4G> first, second;
+    // ptr to 8G region that has the above 2 regions stacked together
+    uint8_t *memory;
+
     xy_t coordinates;
 
 public:
@@ -24,6 +29,8 @@ public:
 
     uint64_t get_starting_address();
     uint64_t get_memory_size();
+
+    uint8_t* get_memory_ptr();
 
     xy_t get_coordinates();
 
