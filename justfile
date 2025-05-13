@@ -10,7 +10,7 @@ help:
 # Recipes that run things
 
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python
-    python3 boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin 0x400030100000 --dtb_dst 0x400030100000 
+    python3 boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 
 #################################
 # Recipes that build things
@@ -40,6 +40,7 @@ _linux_set_localversion defconfig:
 build_linux config='defconfig': (_linux_configure config) (_linux_set_localversion config) _need_toolchain _need_make
     cd linux && make ARCH="riscv" CROSS_COMPILE="riscv64-linux-gnu-" -j $(nproc) {{quiet_make}}
     ln -f linux/arch/riscv/boot/Image Image
+    ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-p100.dtb blackhole-p100.dtb
 
 # Build opensbi
 build_opensbi: _need_toolchain _need_make _need_opensbi_tree
