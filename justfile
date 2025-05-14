@@ -138,9 +138,7 @@ download_rootfs: _need_unxz
         echo "rootfs.ext4 already exists, skipping download."
         exit 0
     fi
-    wget https://cdimage.ubuntu.com/releases/25.04/release/ubuntu-25.04-preinstalled-server-riscv64.img.xz
-    unxz ubuntu-25.04-preinstalled-server-riscv64.img.xz
-    mv ubuntu-25.04-preinstalled-server-riscv64.img rootfs.ext4
+    wget -O rootfs.ext4 https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_unzip
