@@ -1,6 +1,16 @@
-all:
-	g++ -O2 test.cpp l2cpu.cpp tlb.cpp -o test
-	g++ -O2 tt-bh-linux.cpp network.hpp console.hpp l2cpu.cpp tlb.cpp -pthread -Wall -lvdeslirp -lslirp -o tt-bh-linux
+CXXFLAGS := -Wall -O2 -MMD -MP
+LDLIBS := -lvdeslirp -lslirp
+LINK.o := $(LINK.cc)
+
+.PHONY: all clean
+
+all: test tt-bh-linux
+
+test: test.o l2cpu.o tlb.o
+
+tt-bh-linux: tt-bh-linux.o l2cpu.o tlb.o
+
+-include *.d
 
 clean:
-	rm -f test tt-bh-linux
+	$(RM) test tt-bh-linux *.o *.d
