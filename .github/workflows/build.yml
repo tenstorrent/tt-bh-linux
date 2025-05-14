@@ -21,11 +21,18 @@ jobs:
     - name: Clone Linux and OpenSBI
       run: just clone_all
 
+    - name: Record versions
+      id: version
+      # Shallow clone so cannot use git describe
+      run: |
+        echo "linux-sha=$(GIT_DIR=linux/.git git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        echo "opensbi-sha=$(GIT_DIR=opensbi/.git git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
     - name: Load ccache
       uses: actions/cache@v4
       with:
         path: ~/.cache/ccache
-        key: tt
+        key: cache-${{ steps.version.outputs.linux-sha }}-${{ steps.version.outputs.opensbi-sha }}
 
     - name: Build Linux, OpenSBI and device tree
       run: |
