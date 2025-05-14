@@ -51,12 +51,12 @@ build_opensbi: _need_riscv64_toolchain _need_make _need_opensbi_tree
     cd opensbi && make CROSS_COMPILE="riscv64-linux-gnu-" PLATFORM="generic" FW_JUMP="y" FW_JUMP_OFFSET="0x200000" FW_JUMP_FDT_OFFSET="0x100000" BUILD_INFO="y" -j $(nproc) {{quiet_make}}
     ln -f opensbi/build/platform/generic/firmware/fw_jump.bin fw_jump.bin
 
-# Build device tree blob
-build_dtb dt='x280': _need_dtc
-	dtc -I dts -O dtb {{dt}}.dts -o {{dt}}.dtb
+# Build tt-bh-linux
+build_hosttool: _need_make
+	cd console && make -j $(nproc) {{quiet_make}}
 
 # Build everything
-build_all: build_linux build_opensbi build_dtb
+build_all: build_linux build_opensbi build_dtb build_hosttool
 
 #################################
 # Recipes that clean things
@@ -75,11 +75,16 @@ clean_opensbi: _need_make
 clean_dtb dt='x280':
     rm {{dt}}.dtb
 
+# Clean host tool tree and remove binary
+clean_hosttool: _need_make
+    cd console && make -j $(nproc) {{quiet_make}} clean
+    rm tt-bh-linux
+
 # Clean builds and downloads
 clean_all: clean_builds clean_downloads
 
 # Clean outputs from local builds (not downloads)
-clean_builds: clean_linux clean_opensbi clean_dtb
+clean_builds: clean_linux clean_opensbi clean_dtb clean_hosttool
 
 # Remove all download files
 clean_downloads:
