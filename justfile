@@ -58,7 +58,7 @@ build_hosttool: _need_make
 	cd console && make -j $(nproc) {{quiet_make}}
 
 # Build everything
-build_all: build_linux build_opensbi build_dtb build_hosttool
+build_all: build_linux build_opensbi build_hosttool
 
 #################################
 # Recipes that clean things
@@ -73,9 +73,6 @@ clean_opensbi: _need_make
     cd opensbi && make -j $(nproc) {{quiet_make}} clean
     rm fw_jump.bin
 
-# Clean device tree binary
-clean_dtb dt='x280':
-    rm {{dt}}.dtb
 
 # Clean host tool tree and remove binary
 clean_hosttool: _need_make
@@ -86,7 +83,7 @@ clean_hosttool: _need_make
 clean_all: clean_builds clean_downloads
 
 # Clean outputs from local builds (not downloads)
-clean_builds: clean_linux clean_opensbi clean_dtb clean_hosttool
+clean_builds: clean_linux clean_opensbi clean_hosttool
 
 # Remove all download files
 clean_downloads:
@@ -170,7 +167,7 @@ download_all: download_rootfs download_prebuilt
 
 _need_linux: (_need_file 'Image' 'build' 'build_linux or "just download_prebuilt"')
 _need_opensbi: (_need_file 'fw_jump.bin' 'build' 'build_opensbi or "just download_prebuilt"')
-_need_dtb: (_need_file 'x280.dtb' 'build' 'build_dtb or "just download_prebuilt"')
+_need_dtb: (_need_file 'blackhole-p100.dtb' 'build' 'build_linux or "just download_prebuilt"')
 _need_rootfs: (_need_file 'rootfs.ext4' 'build' 'download_rootfs')
 
 # The spelling is delibrate as _need_file will add -ing
