@@ -1,4 +1,4 @@
-console
-network
 test
-combined
+tt-bh-linux
+*.d
+*.o
