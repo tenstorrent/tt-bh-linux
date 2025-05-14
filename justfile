@@ -12,6 +12,10 @@ help:
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python
     python3 boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 
+# Run tt-smi
+ttsmi: _need_ttsmi
+    tt-smi
+
 #################################
 # Recipes that build things
 
@@ -106,8 +110,13 @@ install_toolchain_pkgs: (install 'gcc-riscv64-linux-gnu binutils-multiarch ccach
 # Install riscv qemu and dependencies
 install_qemu: (install 'qemu-system-misc qemu-utils qemu-system-common qemu-system-data qemu-efi-riscv64')
 
+# Install tt-smi
+install_ttsmi: _need_pipx
+	pipx install git+https://github.com/tenstorrent/tt-smi
+	echo "Run 'pipx ensurepath' to update your PATH"
+
 # Install tools
-install_tool_pkgs: (install 'device-tree-compiler xz-utils python3 unzip')
+install_tool_pkgs: (install 'device-tree-compiler xz-utils unzip python3 pipx cargo rustc')
 
 # Install libraries for compiling
 install_libs: (install 'libvdeslirp-dev libslirp-dev')
@@ -167,6 +176,8 @@ _need_unxz: (_need_prog 'unxz' 'install' 'install_tool_pkgs')
 _need_unzip: (_need_prog 'unzip' 'install' 'install_tool_pkgs')
 _need_riscv64_toolchain: (_need_prog 'riscv64-linux-gnu-gcc' 'install' 'install_toolchain_pkgs')
 _need_python: (_need_prog 'python3' 'install' 'install_tool_pkgs')
+_need_pipx: (_need_prog 'pipx' 'install' 'install_tool_pkgs')
+_need_ttsmi: (_need_prog 'tt-smi' 'install' 'install_ttsmi')
 
 [no-exit-message]
 _need_file path action target *params:
