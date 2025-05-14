@@ -159,6 +159,7 @@ _need_opensbi: (_need_file 'fw_jump.bin' 'build' 'build_opensbi or "just downloa
 _need_dtb: (_need_file 'x280.dtb' 'build' 'build_dtb or "just download_prebuilt"')
 _need_rootfs: (_need_file 'rootfs.ext4' 'build' 'download_rootfs')
 
+# The spelling is delibrate as _need_file will add -ing
 _need_linux_tree: (_need_file 'linux' 'clon' 'clone_linux')
 _need_opensbi_tree: (_need_file 'opensbi' 'clon' 'clone_opensbi')
 
