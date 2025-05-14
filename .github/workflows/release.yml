@@ -67,7 +67,7 @@ jobs:
           path: |
             Image
             fw_jump.bin
-            x280.dtb
+            blackhole-p100.dtb
       
       - name: Upload packages to release
         run: |
