@@ -2,7 +2,10 @@
 
 # Tenstorrent Blackhole P100/P150 Linux demo
 
-This is a demo of Linux runnning on the [Tenstorrent Blackhole P100/P150](https://tenstorrent.com/hardware/blackhole) PCIe card using the onboard [SiFive x280](https://www.sifive.com/cores/intelligence-x200-series) RISC-V cores.
+This is a demo of Linux runnning on the [Tenstorrent Blackhole
+P100/P150](https://tenstorrent.com/hardware/blackhole) PCIe card using the
+onboard [SiFive x280](https://www.sifive.com/cores/intelligence-x200-series)
+RISC-V cores.
 
 *FIXME: Replace ASCII art below with boot demo animated gif*
 ```
@@ -44,12 +47,16 @@ This is a demo of Linux runnning on the [Tenstorrent Blackhole P100/P150](https:
  hart isa      : rv64imafdcv_zicntr_zicsr_zifencei_zihpm_zaamo_zalrsc_zfh_zca_zcd_zba_zbb_zve32f_zve32x_zve64d_zve64f_zve64x_zvfh_sscofpmf
 ```
 
-(*Note: This is **not** a Tenstorrent designed CPU such as the high performance [Ascalon](https://tenstorrent.com/en/ip/tt-ascalon) core*)
+(*Note: This is **not** a Tenstorrent designed CPU such as the high performance
+[Ascalon](https://tenstorrent.com/en/ip/tt-ascalon) core*)
 
-This demo downloads OpenSBI, Linux and userspace images, configures them on the Blackhole hardware and starts the x280 cores to boot them.
+This demo downloads OpenSBI, Linux and userspace images, configures them on the
+Blackhole hardware and starts the x280 cores to boot them.
 
 ## Hardware details
-Blackhole has 4 clusters of 4 x280 RISC-V cores called an L2CPU (ie. 16 cores total). Each L2CPU can run as a single coherent SMP. Separate L2CPUs aren't coherent.
+Blackhole has 4 clusters of 4 x280 RISC-V cores called an L2CPU (ie. 16 cores
+total). Each L2CPU can run as a single coherent SMP. Separate L2CPUs aren't
+coherent.
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
 │                                                                       │
@@ -85,10 +92,16 @@ Blackhole has 4 clusters of 4 x280 RISC-V cores called an L2CPU (ie. 16 cores to
        │       │        │       │                 │       │
        └───────┘        └───────┘                 └───────┘
 ```
-The first two L2CPUs each have 4GB of DRAM attached. The last two share 4GB of DRAM.
-*(Note: This is a simplied diagram. Using the memory remapping (via NoC TLBs) all L2CPUs can access all DRAMs. Doing this is much slower and potentially non-coherent)*
+The first two L2CPUs each have 4GB of DRAM attached. The last two share 4GB of
+DRAM.
+*(Note: This is a simplied diagram. Using the memory remapping (via NoC TLBs)
+all L2CPUs can access all DRAMs. Doing this is much slower and potentially
+non-coherent)*
 
-Blackhole also has 120 Tensix cores (not Linux capable). P100 has an addtional 16GB of attached DRAM and P150 has an additional 20GB of attached DRAM (ie. 28/32GB for total for P100/P150 respectfully). These additional resources aren't use for this demo.
+Blackhole also has 120 Tensix cores (not Linux capable). P100 has an addtional
+16GB of attached DRAM and P150 has an additional 20GB of attached DRAM (ie.
+28/32GB for total for P100/P150 respectfully). These additional resources
+aren't use for this demo.
 
 This demo *cannot* be used concurrently with the [Tenstorrent AI stack](https://github.com/tenstorrent/tt-metal).
 
