@@ -2,6 +2,10 @@
 # Set KBUILD_VERBOSE=1 in the environment to make it very noisy.
 quiet_make := if env('QUIET', '') == '1' { '-s' } else { '' }
 
+# Default to the pipx python so we get pyluwen for running boot.py
+# Set TT_PYTHON in your environment to point to your own venv if you prefer
+python := env('TT_PYTHON', '~/.local/pipx/venvs/tt-smi/bin/python3')
+
 [private]
 help:
     @just --list --unsorted --justfile {{justfile()}}
@@ -11,7 +15,7 @@ help:
 
 # Boot the Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python
-    ~/.local/pipx/venvs/tt-smi/bin/python3 boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+    {{python}} boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
     ./console/tt-bh-linux
 
 # Run tt-smi
