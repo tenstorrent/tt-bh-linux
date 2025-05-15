@@ -17,7 +17,7 @@ help:
 # Recipes that run things
 
 # Boot the Blackhole RISC-V CPU
-boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python
+boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python _need_ttkmd
     {{python}} boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
     ./console/tt-bh-linux
 
@@ -204,6 +204,8 @@ _need_python: (_need_prog 'python3' 'install' 'install_tool_pkgs')
 _need_pipx: (_need_prog 'pipx' 'install' 'install_tool_pkgs')
 _need_ttsmi: (_need_prog 'tt-smi' 'install' 'install_ttsmi')
 _need_dkms: (_need_prog 'dkms' 'install' 'install_dkms')
+
+_need_ttkmd: (_need_file '/dev/tenstorrent/0' 'install' 'install_ttkmd')
 
 [no-exit-message]
 _need_file path action target *params:
