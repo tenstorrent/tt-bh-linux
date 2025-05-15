@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef L2CPU_H
 #define L2CPU_H
 #include <vector>

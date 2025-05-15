@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
+// SPDX-License-Identifier: Apache-2.0
+
 #include <stdint.h>
 #include <string.h>
 #include <slirp/libslirp.h>
@@ -11,7 +14,10 @@
 #include <atomic>
 
 #include "l2cpu.h"
-#include "libvdeslirp.h"
+
+extern "C" {
+#include <slirp/libvdeslirp.h>
+}
 
 #define MTU 1500 // MTU (Ignoring ethernet header) that is set for adapter = 1500
 #define PACKET_SIZE 1514 // MTU + ethernet header size = 1514
@@ -155,51 +161,3 @@ int network_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag){
     return 0;
 }
 
-//int main(int argc, char **argv){
-//    int l2cpu=0;
-//    const char* const short_opts = "l:h";
-//    const option long_opts[] = {
-//            {"l2cpu", required_argument, nullptr, 'l'},
-//            {"help", no_argument, nullptr, 'h'},
-//            {nullptr, no_argument, nullptr, 0}
-//    };
-//
-//    while (true)
-//    {
-//        const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
-//
-//        if (-1 == opt)
-//            break;
-//
-//        switch (opt)
-//        {
-//        case 'l':
-//            l2cpu = std::stoi(optarg);
-//            break;
-//
-//        case 'h': // -h or --help
-//        case '?': // Unrecognized option
-//        default:
-//            std::cout <<
-//            "--l2cpu <l>:         L2CPU to attach to\n"
-//            "--help:              Show help\n";
-//            exit(1);
-//        }
-//    }
-//
-//    if (l2cpu < 0 || l2cpu > 3){
-//        std::cerr<<"l2cpu must be one of 0,1,2,3"<<"\n";
-//        exit(1);
-//    }
-//
-//    while (true){
-//        /*
-//        We call run_once in a loop
-//        If the chip resets or the MAGIC value disappears,
-//        we sleep for a bit and try setting everything up again
-//        */
-//        run_once(l2cpu);
-//        std::cout<<"Sleeping for a bit and trying again"<<"\n";
-//        usleep(100000);
-//    }
-//}
