@@ -25,6 +25,10 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python
 ttsmi: _need_ttsmi
     tt-smi
 
+# Connect to console (requires a booted RISC-V)
+connect:
+    ./console/tt-bh-linux
+
 #################################
 # Recipes that build things
 
