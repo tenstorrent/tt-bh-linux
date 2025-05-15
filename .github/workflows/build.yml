@@ -2,12 +2,13 @@ name: Tenstorrent Blackhole Linux CI 🐧
 
 on:
   push:
+    branches: ["**"]
+    tags: ["v*"]
   pull_request:
     branches: [ $default-branch ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -44,3 +45,24 @@ jobs:
     - name: Print stats
       run: |
         ccache -s
+
+  upload_release_artifacts:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download tt-bh-linux artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: tt-bh-linux
+
+    - name: Upload packages to release
+      run: |
+        gh release upload ${{ github.ref_name }} Image fw_jump.bin blackhole-p100.dtb
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
