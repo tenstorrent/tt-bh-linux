@@ -101,7 +101,7 @@ clean_downloads:
 # Recipes that install packages
 
 # Install all packages
-install_all: apt_update install_kernel_pkgs install_toolchain_pkgs install_tool_pkgs install_libs
+install_all: apt_update install_kernel_pkgs install_toolchain_pkgs install_tool_pkgs install_hosttool_pkgs
 
 sudo := 'sudo'
 
@@ -122,31 +122,40 @@ install_toolchain_pkgs: (install 'gcc-riscv64-linux-gnu binutils-multiarch ccach
 # Install riscv qemu and dependencies
 install_qemu: (install 'qemu-system-misc qemu-utils qemu-system-common qemu-system-data qemu-efi-riscv64')
 
+# Install tools
+install_tool_pkgs: (install 'device-tree-compiler xz-utils unzip python3 pipx cargo rustc dkms')
+
+# Install libraries for compiling
+install_hosttool_pkgs: (install 'libvdeslirp-dev libslirp-dev')
+
 # Install tt-smi
 install_ttsmi: _need_pipx
 	pipx install git+https://github.com/tenstorrent/tt-smi
 	echo "Run 'pipx ensurepath' to update your PATH"
 
-# Install tools
-install_tool_pkgs: (install 'device-tree-compiler xz-utils unzip python3 pipx cargo rustc')
-
-# Install libraries for compiling
-install_libs: (install 'libvdeslirp-dev libslirp-dev')
+# Install tt-kmd
+install_ttkmd: _need_dkms _need_ttkmd_tree
+    cd tt-kmd && sudo dkms add .
+    cd tt-kmd && sudo dkms install tenstorrent/1.34
+    cd tt-kmd && sudo modprobe -v tenstorrent
 
 #################################
 # Recipes that clone git trees
 
-_clone repo:
-    git clone --depth 1 -b tt-blackhole {{repo}}
+_clone repo branch:
+    git clone --depth 1 -b {{branch}} {{repo}}
 
-# Clone the Linux kernel source tree
-clone_linux: (_clone 'https://github.com/tenstorrent/linux')
+# Clone the Tenstorrent Linux kernel source tree
+clone_linux: (_clone 'https://github.com/tenstorrent/linux' 'tt-blackhole')
 
-# Clone the Tenstorernt opensbi source tree
-clone_opensbi: (_clone 'https://github.com/tenstorrent/opensbi')
+# Clone the Tenstorrent opensbi source tree
+clone_opensbi: (_clone 'https://github.com/tenstorrent/opensbi' 'tt-blackhole')
 
-# Clone linux and opensbi trees
-clone_all: clone_linux clone_opensbi
+# Clone the Tenstorrent tt-kmd source tree
+clone_ttkmd: (_clone 'https://github.com/tenstorrent/tt-kmd' 'main')
+
+# Clone linux, opensbi and tt-kmd trees
+clone_all: clone_linux clone_opensbi clone_ttkmd
 
 #################################
 # Recipes that download things
@@ -181,6 +190,7 @@ _need_rootfs: (_need_file 'rootfs.ext4' 'build' 'download_rootfs')
 # The spelling is delibrate as _need_file will add -ing
 _need_linux_tree: (_need_file 'linux' 'clon' 'clone_linux')
 _need_opensbi_tree: (_need_file 'opensbi' 'clon' 'clone_opensbi')
+_need_ttkmd_tree:  (_need_file 'tt-kmd' 'clon' 'clone_ttkmd')
 
 _need_make: (_need_prog 'make' 'install' 'install_kernel_pkgs')
 _need_dtc: (_need_prog 'dtc' 'install' 'install_tool_pkgs')
@@ -190,6 +200,7 @@ _need_riscv64_toolchain: (_need_prog 'riscv64-linux-gnu-gcc' 'install' 'install_
 _need_python: (_need_prog 'python3' 'install' 'install_tool_pkgs')
 _need_pipx: (_need_prog 'pipx' 'install' 'install_tool_pkgs')
 _need_ttsmi: (_need_prog 'tt-smi' 'install' 'install_ttsmi')
+_need_dkms: (_need_prog 'dkms' 'install' 'install_dkms')
 
 [no-exit-message]
 _need_file path action target *params:
