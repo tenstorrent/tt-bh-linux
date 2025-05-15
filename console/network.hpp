@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
+// SPDX-License-Identifier: Apache-2.0
+
 #include <stdint.h>
 #include <string.h>
 #include <slirp/libslirp.h>
@@ -11,7 +14,10 @@
 #include <atomic>
 
 #include "l2cpu.h"
-#include "libvdeslirp.h"
+
+extern "C" {
+#include <slirp/libvdeslirp.h>
+}
 
 #define MTU 1500 // MTU (Ignoring ethernet header) that is set for adapter = 1500
 #define PACKET_SIZE 1514 // MTU + ethernet header size = 1514

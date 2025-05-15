@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
 
 # Check if just is already in the path
 if command -v just >/dev/null 2>&1; then

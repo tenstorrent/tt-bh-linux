@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
 # Set QUIET=1 in the environment to make the build very quiet.
 # Set KBUILD_VERBOSE=1 in the environment to make it very noisy.
 quiet_make := if env('QUIET', '') == '1' { '-s' } else { '' }
