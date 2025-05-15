@@ -95,39 +95,60 @@ This demo *cannot* be used concurrently with the [Tenstorrent AI stack](https://
 ## Boot Linux
 
 ### Dependencies
-apt Dependencies for tt-smi and dtc
+
+The demo uses the same interfaces as the Tenstorrent System Management
+Interface (TT-SMI) tool to interact with the Blackhole PCIe device:
+
+ * [luwen](https://github.com/tenstorrent/luwen/), a Rust library with a Python
+   interface for programming Tenstorrent hardware
+ * [tt-kmd](https://github.com/tenstorrent/tt-kmd/), a Linux kernel module that
+   provides an interface for userspace such as luwen
+
+The 'just' script can be used to set up tt-smi and tt-kmd automatically.
+
+### Install just
+
+Install the `just` package if you're running Ubuntu 24.04 or newer:
 ```
-sudo apt install -y python3-venv cargo rustc device-tree-compiler
+sudo apt install just
 ```
 
-Install tt-smi
-```
-git clone https://github.com/tenstorrent/tt-smi
-python3 -m venv tt-smi/.venv
-tt-smi/.venv/bin/pip install ./tt-smi
-```
-
-luwen is installed as part of tt-smi
-
-### Before Running Scripts
-Activate tt-smi env before running script
-```
-source tt-smi/.venv/bin/activate
-```
-Install the `just` package if it exists on your distro, or run the following script:
+If you're running something older, run the following script to grab a release
+from the just github page:
 ```
 ./get_just.sh 
 ```
 
-### Build Linux and OpenSBI
+### Install dependencies
+```
+just install_all
+```
+
+### Build Linux, OpenSBI and the host tool
 ```
 just build_all
 ```
 
 ### Boot Linux
 ```
-./run.sh
+just boot
 ```
 This will launch a console application.  Default login is `root`/`root`x.  Quit with `Ctrl-A`.
 
-[More information is avalible here](INFO.md)
+[More information is available here](INFO.md)
+
+### Manual installation
+
+If you prefer to manually install tt-smi, first install the dependencies:
+```
+sudo apt install -y python3-venv cargo rustc
+```
+
+Then install tt-smi using pipx:
+```
+pipx install https://github.com/tenstorrent/tt-smi
+```
+luwen is installed as a dependency of of tt-smi.
+
+The kernel module can bee installed by following the instructions on the
+[tt-kmd](https://github.com/tenstorrent/tt-kmd/) repository.
