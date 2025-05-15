@@ -90,6 +90,8 @@ The first two L2CPUs each have 4GB of DRAM attached. The last two share 4GB of D
 
 Blackhole also has 120 Tensix cores (not Linux capable). P100 has an addtional 16GB of attached DRAM and P150 has an additional 20GB of attached DRAM (ie. 28/32GB for total for P100/P150 respectfully). These additional resources aren't use for this demo.
 
+This demo *cannot* be used concurrently with the [Tenstorrent AI stack](https://github.com/tenstorrent/tt-metal).
+
 ## Boot Linux
 
 ### Dependencies
