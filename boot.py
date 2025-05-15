@@ -98,7 +98,6 @@ def conf_l2cpu_noc_tlb_128G(chip, l2cpu_index, tlb_entry, x, y, addr):
     chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 0xE00 + 12 * tlb_entry, (addr & 0x7ffffff)) # l2cpu_noc_tlb.NOC_TLB_GROUP_1_{tlb_entry}
     chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 0xE00 + 12 * tlb_entry + 4, strict_order << 25 | y << 6 | x) # l2cpu_noc_tlb.NOC_TLB_GROUP_1_MISC_0_{tlb_entry}
     chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 0xE00 + 12 * tlb_entry + 8, 0x0) # l2cpu_noc_tlb.NOC_TLB_GROUP_1_MISC_1_{tlb_entry}
-    # return (1 << 43) | (1 << 37) * (1 + tlb_entry) | 0x30000000
     return 0x400030000000 | (1 << 43) | ((1 << 37) * (1 + tlb_entry))
 
 def conf_pcie_rc_noc_tlb_data(chip):
@@ -112,37 +111,6 @@ def conf_pcie_rc_noc_tlb_data(chip):
 
     chip.noc_write32(0, pcie_rc_noc_x, pcie_rc_noc_y, access_address + 0x0, 0x0)
     return access_address
-
-def uart_init(chip, l2cpu_index):
-    reset_unit_base = 0x80030000
-    (uart_block_noc_x, uart_block_noc_y) = (8, 0)
-    DLL_ADDR = 0x80200000 #RBR interperted as Divisor Latch Low  when LCR[7] =1
-    DLH_ADDR = 0x80200004 #IEH interperted as Divisor Latch High when LCR[7] =1
-    FCR_ADDR = 0x80200008 # WRITE only
-    LCR_ADDR = 0x8020000C
-    DLF_ADDR = 0x802000C0
-    UART_ADDRESS_BLOCK_LCR_REG_DEFAULT = 0x00000000
-
-    gpio4_pad_trien_cntl = chip.axi_read32(reset_unit_base + 0x5a0) # GPIO4_PAD_TRIEN_CNTL
-    gpio4_pad_rxen_cntl  = chip.axi_read32(reset_unit_base + 0x5ac) # GPIO4_PAD_RXEN_CNTL
-    chip.axi_write32(reset_unit_base + 0x5a0, (gpio4_pad_trien_cntl | 2) & 0xfffffe) # GPIO4_PAD_TRIEN_CNTL
-    chip.axi_write32(reset_unit_base + 0x5ac , (gpio4_pad_rxen_cntl  | 2) & 0xfffffe) # GPIO4_PAD_RXEN_CNTL
-
-    uart_cntl = chip.axi_read32(reset_unit_base + 0x608) # UART_CNTL
-    uart_enable = 0x3
-    chip.axi_write32(reset_unit_base + 0x608, uart_cntl | uart_enable) # UART_CNTL
-
-    lcr_data_dlab = 0x1
-    chip.noc_write32(0, uart_block_noc_x, uart_block_noc_y, LCR_ADDR,UART_ADDRESS_BLOCK_LCR_REG_DEFAULT | (lcr_data_dlab << 7))
-    chip.noc_write32(0, uart_block_noc_x, uart_block_noc_y, DLL_ADDR,0x45)
-    chip.noc_write32(0, uart_block_noc_x, uart_block_noc_y, DLH_ADDR,0x1)
-    chip.noc_write32(0, uart_block_noc_x, uart_block_noc_y, DLF_ADDR,0x3)
-    chip.noc_write32(0, uart_block_noc_x, uart_block_noc_y, FCR_ADDR,0x1)
-
-    lcr_data_dlab = 0x0
-    lcr_data_dls  = 0x3
-    chip.noc_write32(0, 8, 0, LCR_ADDR,UART_ADDRESS_BLOCK_LCR_REG_DEFAULT | (lcr_data_dlab << 7) | lcr_data_dls)
-    conf_l2cpu_noc_tlb_2M(chip, l2cpu_index, 0, 8, 0, 0x080200000)
 
 def main():
     args = parse_args()
@@ -160,20 +128,6 @@ def main():
     for l2cpu in l2cpus_to_boot:
         (l2cpu_noc_x, l2cpu_noc_y) = l2cpu_tile_mapping[l2cpu]
         l2cpu_base = 0xfffff7fefff10000
-
-        # No UART in scrappy
-        # if args.uart:
-        #     uart_init(chip, args.l2cpu)
-
-        # No pcie RC config needed in scrappy
-        # # Address within PCIe RC tile where config space is visible.
-        # # Need to map a 2MiB TLB window at it.
-        # pcie_config_space_rc_tile = conf_pcie_rc_noc_tlb_data(chip)
-        # print(f"PCIe config space address in RC tile: 0x{pcie_config_space_rc_tile:x}")
-        # pcie_config_space_x280 = conf_l2cpu_noc_tlb_2M(chip, args.l2cpu, 17, 11, 0, pcie_config_space_rc_tile)
-        # print(f"PCIe config space address in L2CPU tile: 0x{pcie_config_space_x280:x}")
-        # pcie_space_x280 = conf_l2cpu_noc_tlb_2M(chip, args.l2cpu, 18, 11, 0, 0)
-        # print(f"PCIe space address in L2CPU tile: 0x{pcie_space_x280:x}")
 
         # This config can be used if you want to map another dram tile
         # to either add more memory or put rootfs in one of the tiles
