@@ -70,6 +70,7 @@ build_hosttool: _need_make
 
 # Build everything
 build_all: build_linux build_opensbi build_hosttool
+    echo "Build complete! Now run 'just boot' to run Linux"
 
 #################################
 # Recipes that clean things
@@ -105,6 +106,7 @@ clean_downloads:
 
 # Install all packages
 install_all: apt_update install_kernel_pkgs install_toolchain_pkgs install_tool_pkgs install_hosttool_pkgs
+    echo "Install complete! Now run 'just build_all' to build Linux, OpenSBI and the host tool"
 
 sudo := 'sudo'
 
