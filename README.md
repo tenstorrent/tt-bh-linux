@@ -81,7 +81,7 @@ Interface (TT-SMI) tool to interact with the Blackhole PCIe device:
 
 The 'just' script can be used to set up tt-smi and tt-kmd automatically.
 
-### Install just
+### Install [just](https://github.com/casey/just)
 
 Install the `just` package if you're running Ubuntu 24.04 or newer:
 ```
