@@ -74,12 +74,15 @@ connect:
 #################################
 # Recipes that build things
 
+RV64_TARGETS = build_linux build_opensbi
+
+$(RV64_TARGETS): export CROSS_COMPILE=riscv64-linux-gnu-
+$(RV64_TARGETS): export ARCH=riscv
+
 # args: defconfig
 define _linux_configure
     @$(SHELL_VERBOSE) \
     set -eo pipefail ; \
-    export ARCH=riscv ; \
-    export CROSS_COMPILE=riscv64-linux-gnu- ; \
     cd linux ; \
     set -x ; \
     $(MAKE) -j $(nproc) $(quiet_make) $(1)
@@ -104,13 +107,13 @@ endef
 build_linux: _need_riscv64_toolchain _need_linux_tree
 	$(call _linux_configure,blackhole_defconfig)
 	$(call _linux_set_localversion,blackhole_defconfig)
-	$(MAKE) -C linux ARCH="riscv" CROSS_COMPILE="riscv64-linux-gnu-" -j $(nproc) $(quiet_make)
+	$(MAKE) -C linux -j $(nproc) $(quiet_make)
 	ln -f linux/arch/riscv/boot/Image Image
 	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-p100.dtb blackhole-p100.dtb
 
 # Build opensbi
 build_opensbi: _need_riscv64_toolchain _need_opensbi_tree
-	$(MAKE) -C opensbi CROSS_COMPILE="riscv64-linux-gnu-" PLATFORM="generic" FW_JUMP="y" FW_JUMP_OFFSET="0x200000" FW_JUMP_FDT_OFFSET="0x100000" BUILD_INFO="y" -j $(nproc) $(quiet_make)
+	$(MAKE) -C opensbi PLATFORM="generic" FW_JUMP="y" FW_JUMP_OFFSET="0x200000" FW_JUMP_FDT_OFFSET="0x100000" BUILD_INFO="y" -j $(nproc) $(quiet_make)
 	ln -f opensbi/build/platform/generic/firmware/fw_jump.bin fw_jump.bin
 
 # Build tt-bh-linux
@@ -125,9 +128,11 @@ build_all: build_linux build_opensbi build_hosttool
 #################################
 # Recipes that clean things
 
+RV64_TARGETS += clean_linux clean_opensbi
+
 # Clean linux tree and remove binary
 clean_linux:
-	if [ -d linux ]; then $(MAKE) -C linux ARCH="riscv" CROSS_COMPILE="riscv64-linux-gnu-" -j $(nproc) $(quiet_make) clean; fi
+	if [ -d linux ]; then $(MAKE) -C linux -j $(nproc) $(quiet_make) clean; fi
 	rm -f Image
 
 # Clean opensbi tree and remove binary
