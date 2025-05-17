@@ -79,34 +79,28 @@ Interface (TT-SMI) tool to interact with the Blackhole PCIe device:
  * [tt-kmd](https://github.com/tenstorrent/tt-kmd/), a Linux kernel module that
    provides an interface for userspace such as luwen
 
-The 'just' script can be used to set up tt-smi and tt-kmd automatically.
+The Makefile can be used to set up tt-smi and tt-kmd automatically.
 
-### Install [just](https://github.com/casey/just)
+### Install make
 
-Install the `just` package if you're running Ubuntu 24.04 or newer:
+Install the `make` package:
 ```
-sudo apt install just
-```
-
-If you're running something older, run the following script to grab a release
-from the just github page:
-```
-./get_just.sh 
+sudo apt install make
 ```
 
 ### Install dependencies
 ```
-just install_all
+make install_all
 ```
 
 ### Build Linux, OpenSBI and the host tool
 ```
-just build_all
+make build_all
 ```
 
 ### Boot Linux
 ```
-just boot
+make boot
 ```
 This will launch a console application.  Default login is `root`/`root`x.  Quit with `Ctrl-A`.
 
