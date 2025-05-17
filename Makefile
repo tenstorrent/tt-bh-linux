@@ -208,22 +208,24 @@ install_ttkmd: _need_dkms _need_ttkmd_tree
 #################################
 # Recipes that clone git trees
 
-# args: repo branch:
+# args: repo directory branch
 define _clone
-    git clone --depth 1 -b $(2) $(1)
+    $(Q)if [ ! -d $(2) ]; then \
+        git clone --depth 1 -b $(3) $(1) $(2); \
+    fi
 endef
 
 # Clone the Tenstorrent Linux kernel source tree
 clone_linux:
-	$(call _clone,https://github.com/tenstorrent/linux,tt-blackhole)
+	$(call _clone,https://github.com/tenstorrent/linux,linux,tt-blackhole)
 
 # Clone the Tenstorrent opensbi source tree
 clone_opensbi:
-	$(call _clone,https://github.com/tenstorrent/opensbi,tt-blackhole)
+	$(call _clone,https://github.com/tenstorrent/opensbi,opensbi,tt-blackhole)
 
 # Clone the Tenstorrent tt-kmd source tree
 clone_ttkmd:
-	$(call _clone,https://github.com/tenstorrent/tt-kmd,main)
+	$(call _clone,https://github.com/tenstorrent/tt-kmd,tt-kmd,main)
 
 # Clone linux, opensbi and tt-kmd trees
 clone_all: clone_linux clone_opensbi clone_ttkmd
