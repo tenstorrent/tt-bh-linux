@@ -18,11 +18,11 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt-get install -qq just
-        just install_all
+        sudo apt-get install -qq make
+        make install_all
 
     - name: Clone Linux and OpenSBI
-      run: just clone_all
+      run: make clone_all
 
     - name: Load ccache
       uses: actions/cache@v4
@@ -33,7 +33,7 @@ jobs:
     - name: Build Linux, OpenSBI and device tree
       run: |
         export PATH="/usr/lib/ccache:$PATH"
-        just build_all
+        make build_all
 
     - name: Archive artifacts
       uses: actions/upload-artifact@v4
