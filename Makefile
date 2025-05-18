@@ -106,7 +106,7 @@ define _linux_set_localversion
 endef
 
 # Build the kernel
-build_linux: _need_riscv64_toolchain _need_linux_tree
+build_linux: _need_riscv64_toolchain _need_gcc _need_linux_tree
 	$(call _linux_configure,blackhole_defconfig)
 	$(call _linux_set_localversion,blackhole_defconfig)
 	$(MAKE) -C linux -j $(nproc) $(quiet_make)
@@ -114,13 +114,13 @@ build_linux: _need_riscv64_toolchain _need_linux_tree
 	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-p100.dtb blackhole-p100.dtb
 
 # Build opensbi
-build_opensbi: _need_riscv64_toolchain _need_opensbi_tree
+build_opensbi: _need_riscv64_toolchain _need_gcc _need_opensbi_tree
 	$(MAKE) -C opensbi PLATFORM="generic" FW_JUMP="y" FW_JUMP_OFFSET="0x200000" FW_JUMP_FDT_OFFSET="0x100000" BUILD_INFO="y" -j $(nproc) $(quiet_make)
 	ln -f opensbi/build/platform/generic/firmware/fw_jump.bin fw_jump.bin
 
 # Build tt-bh-linux
 # FIXME needs <slirp/libvdeslirp.h>
-build_hosttool:
+build_hosttool: _need_gcc
 	$(MAKE) -C console -j $(nproc) $(quiet_make)
 
 # Build everything
@@ -297,6 +297,9 @@ _need_dkms:
 _need_dtc:
 	$(call _need_prog,dtc,install,install_tool_pkgs)
 
+_need_gcc:
+	$(call _need_prog,gcc,install,install_kernel_pkgs)
+
 _need_git:
 	$(call _need_prog,git,install,install_kernel_pkgs)
 
@@ -396,6 +399,7 @@ endef
 	_need_dkms \
 	_need_dtb \
 	_need_dtc \
+	_need_gcc \
 	_need_git \
 	_need_linux \
 	_need_linux_tree \
