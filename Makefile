@@ -133,7 +133,7 @@ RV64_TARGETS += clean_linux clean_opensbi
 # Clean linux tree and remove binary
 clean_linux:
 	if [ -d linux ]; then $(MAKE) -C linux -j $(nproc) $(quiet_make) clean; fi
-	rm -f Image
+	rm -f Image blackhole-p100.dtb
 
 # Clean opensbi tree and remove binary
 clean_opensbi:
