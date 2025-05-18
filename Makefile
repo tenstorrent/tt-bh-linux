@@ -33,6 +33,7 @@ help:
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
 	@echo "    build_all              # Build everything"
+	@echo "    clean_clones           # Clean all cloned trees"
 	@echo "    clean_linux            # Clean linux tree and remove binary"
 	@echo "    clean_opensbi          # Clean opensbi tree and remove binary"
 	@echo "    clean_hosttool         # Clean host tool tree and remove binary"
@@ -150,8 +151,12 @@ clean_hosttool:
 	if [ -d console ]; then $(MAKE) -C console -j $(nproc) $(quiet_make) clean; fi
 	rm -f console/tt-bh-linux
 
+# Clean cloned trees
+clean_clones:
+	rm -rf linux opensbi tt-kmd
+
 # Clean builds and downloads
-clean_all: clean_builds clean_downloads
+clean_all: clean_builds clean_downloads clean_clones
 
 # Clean outputs from local builds (not downloads)
 clean_builds: clean_linux clean_opensbi clean_hosttool clean_ttkmd
@@ -361,6 +366,7 @@ endef
 	build_opensbi \
 	clean \
 	clean_all \
+	clean_clones \
 	clean_builds \
 	clean_downloads \
 	clean_hosttool \
