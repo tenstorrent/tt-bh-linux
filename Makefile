@@ -226,15 +226,15 @@ define _clone
 endef
 
 # Clone the Tenstorrent Linux kernel source tree
-clone_linux:
+clone_linux: _need_git
 	$(call _clone,https://github.com/tenstorrent/linux,linux,tt-blackhole)
 
 # Clone the Tenstorrent opensbi source tree
-clone_opensbi:
+clone_opensbi: _need_git
 	$(call _clone,https://github.com/tenstorrent/opensbi,opensbi,tt-blackhole)
 
 # Clone the Tenstorrent tt-kmd source tree
-clone_ttkmd:
+clone_ttkmd: _need_git
 	$(call _clone,https://github.com/tenstorrent/tt-kmd,tt-kmd,main)
 
 # Clone linux, opensbi and tt-kmd trees
@@ -296,6 +296,9 @@ _need_dkms:
 
 _need_dtc:
 	$(call _need_prog,dtc,install,install_tool_pkgs)
+
+_need_git:
+	$(call _need_prog,git,install,install_kernel_pkgs)
 
 _need_luwen:
 	$(call _need_pylib,pyluwen,install,install_ttsmi)
@@ -393,6 +396,7 @@ endef
 	_need_dkms \
 	_need_dtb \
 	_need_dtc \
+	_need_git \
 	_need_linux \
 	_need_linux_tree \
 	_need_luwen \
