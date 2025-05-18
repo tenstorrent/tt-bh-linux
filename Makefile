@@ -114,7 +114,7 @@ build_linux: _need_riscv64_toolchain _need_gcc _need_linux_tree
 	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-p100.dtb blackhole-p100.dtb
 
 # Build opensbi
-build_opensbi: _need_riscv64_toolchain _need_gcc _need_opensbi_tree
+build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
 	$(MAKE) -C opensbi PLATFORM="generic" FW_JUMP="y" FW_JUMP_OFFSET="0x200000" FW_JUMP_FDT_OFFSET="0x100000" BUILD_INFO="y" -j $(nproc) $(quiet_make)
 	ln -f opensbi/build/platform/generic/firmware/fw_jump.bin fw_jump.bin
 
