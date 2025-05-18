@@ -36,6 +36,7 @@ help:
 	@echo "    clean_linux            # Clean linux tree and remove binary"
 	@echo "    clean_opensbi          # Clean opensbi tree and remove binary"
 	@echo "    clean_hosttool         # Clean host tool tree and remove binary"
+	@echo "    clean_ttkmd            # Clean tt-kmd tree"
 	@echo "    clean_all              # Clean builds and downloads"
 	@echo "    clean_builds           # Clean outputs from local builds (not downloads)"
 	@echo "    clean_downloads        # Remove all downloaded files"
@@ -140,6 +141,10 @@ clean_opensbi:
 	if [ -d opensbi ]; then $(MAKE) -C opensbi -j $(nproc) $(quiet_make) clean; fi
 	rm -f fw_jump.bin
 
+# Clean tt-kmd tree
+clean_ttkmd:
+	-if [ -d tt-kmd ]; then $(MAKE) -C tt-kmd -j $(nproc) $(quiet_make) clean; fi
+
 # Clean host tool tree and remove binary
 clean_hosttool:
 	if [ -d console ]; then $(MAKE) -C console -j $(nproc) $(quiet_make) clean; fi
@@ -149,7 +154,7 @@ clean_hosttool:
 clean_all: clean_builds clean_downloads
 
 # Clean outputs from local builds (not downloads)
-clean_builds: clean_linux clean_opensbi clean_hosttool
+clean_builds: clean_linux clean_opensbi clean_hosttool clean_ttkmd
 
 clean: clean_builds
 
@@ -361,6 +366,7 @@ endef
 	clean_hosttool \
 	clean_linux \
 	clean_opensbi \
+	clean_ttkmd \
 	clone_all \
 	clone_linux \
 	clone_opensbi \
