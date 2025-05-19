@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# Find the python interpreter in the pipx tt-smi venv and run it
+# Use `make install_tool_pkgs install_ttsmi` to install it.
+
+set -eo pipefail
+
+if ! command -v pipx > /dev/null; then
+    echo -e '\e[31mError: pipx is not installed, install it with \e[32mmake install_tool_pkgs\e[0m'
+    exit 1
+fi
+
+# pipx environment is only available in version >= 1.1.0
+rc=0
+pipx environment --value PIPX_LOCAL_VENVS > /dev/null 2>&1 || rc=1
+if [ $rc -eq 0 ]; then
+    dir=$(pipx environment --value PIPX_LOCAL_VENVS)
+else
+    # Find it manually
+    dir=$HOME/.local/share/pipx/venvs
+    if [ ! -d $dir ]; then
+        dir=$HOME/.local/pipx/venvs
+    fi
+fi
+
+if [ ! -d "$dir" ]; then
+    echo -e '\e[31mError: pipx venvs directory not found\e[0m'
+    exit 1
+fi
+
+TTSMI_DIR="$dir/tt-smi"
+if [ ! -d "$TTSMI_DIR" ]; then
+        echo -e '\e[31mError: tt-smi not found, install it with \e[32mmake install_ttsmi\e[0m'
+        exit 1
+fi
+
+PYTHON="$TTSMI_DIR/bin/python3"
+
+if [ ! -x "$PYTHON" ]; then
+        echo -e '\e[31mError: tt-smi python not found/executable\e[0m'
+        exit 1
+fi
+
+exec $PYTHON "$@"
