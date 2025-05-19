@@ -26,6 +26,7 @@ help:
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    ttsmi                  # Run tt-smi"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
+	@echo "    ssh			  # SSH to machine (requires a booted RISC-V)"
 	@echo "    build_linux            # Build the kernel"
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
@@ -69,6 +70,10 @@ ttsmi: _need_ttsmi
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool
 	./console/tt-bh-linux
+
+# Connect over SSH (requires a booted RISC-V)
+ssh: _need_ssh_key
+	ssh -F /dev/null -i user -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
 #################################
 # Recipes that build things
@@ -119,6 +124,12 @@ build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
 # FIXME needs <slirp/libvdeslirp.h>
 build_hosttool: _need_gcc
 	$(MAKE) -C console -j $(nproc) $(quiet_make)
+
+# Generate a SSH key and add it to the image
+build_ssh_key: _need_e2tools
+	if [ ! -e user ]; then ssh-keygen -f user -N ''; fi
+	e2mkdir -G 1000 -O 1000 -P 755 rootfs.ext4:/home/debian/.ssh
+	e2cp -G 1000 -O 1000 -P 600 user.pub rootfs.ext4:/home/debian/.ssh/authorized_keys
 
 # Build everything
 build_all: build_linux build_opensbi build_hosttool
@@ -195,7 +206,7 @@ install_qemu:
 
 # Install tools
 install_tool_pkgs:
-	$(call install,device-tree-compiler xz-utils unzip python3 pipx cargo rustc dkms)
+	$(call install,device-tree-compiler xz-utils unzip python3 pipx cargo rustc dkms e2tools)
 
 # Install libraries for compiling
 install_hosttool_pkgs:
@@ -331,6 +342,12 @@ _need_wget:
 
 _need_unzip:
 	$(call _need_prog,unzip,install,install_tool_pkgs)
+
+_need_e2tools:
+	$(call _need_prog,e2cp,install,install_tool_pkgs)
+
+_need_ssh_key:
+	$(call _need_file,user,build_ssh_key)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
