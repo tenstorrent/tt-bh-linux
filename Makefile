@@ -243,6 +243,11 @@ clone_all: clone_linux clone_opensbi clone_ttkmd
 #################################
 # Recipes that download things
 
+define wget
+    wget -O $(1).tmp $(2)
+    mv -f $(1).tmp $(1)
+endef
+
 # Download Ubuntu server 25.04 pre-installed rootfs
 download_rootfs: _need_wget _need_unxz
 	@$(SHELL_VERBOSE) \
@@ -252,12 +257,12 @@ download_rootfs: _need_wget _need_unxz
 		exit 0; \
 	fi; \
 	set -x ; \
-	wget -O rootfs.ext4 https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img
+	$(call wget,rootfs.ext4,https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img)
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
 	# TODO: This is the first passing CI job. It should instead be the latest release
-	wget https://github.com/tenstorrent/tt-bh-linux/actions/runs/14748198608/artifacts/3035601544
+	$(call wget,tt-bh-linux.zip,https://github.com/tenstorrent/tt-bh-linux/actions/runs/14748198608/artifacts/3035601544)
 	unzip tt-bh-linux.zip
 	rm tt-bh-linux.zip
 
