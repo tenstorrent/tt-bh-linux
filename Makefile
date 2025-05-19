@@ -205,7 +205,7 @@ install_hosttool_pkgs:
 	$(call install,libvdeslirp-dev libslirp-dev)
 
 # Install tt-smi
-install_ttsmi: _need_pipx
+install_ttsmi: _need_pipx _need_git
 	pipx install git+https://github.com/tenstorrent/tt-smi
 	@echo "Run 'pipx ensurepath' to update your PATH"
 
