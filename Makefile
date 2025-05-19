@@ -9,11 +9,8 @@ endif
 
 # Default to the pipx python so we get pyluwen for running boot.py
 # Set TT_PYTHON in your environment to point to your own venv if you prefer
-# TODO: Make this better
-ifdef TT_PYTHON
-    PYTHON := $(TT_PYTHON)
-else
-    PYTHON := $(HOME)/.local/share/pipx/venvs/tt-smi/bin/python3
+ifndef TT_PYTHON
+    TT_PYTHON := ./ttsmi-python
 endif
 
 # Use bash as the shell
@@ -61,8 +58,8 @@ help:
 # Recipes that run things
 
 # Boot the Blackhole RISC-V CPU
-boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python _need_ttkmd _need_luwen
-	$(PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python _need_luwen
+	$(TT_PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
 
 # Run tt-smi
@@ -360,10 +357,11 @@ define _need_prog =
 endef
 
 # _need_pylib: Check if a python package exists, and if not tell the user how to install it
+# NB. This uses TT_PYTHON.
 # args: python-package action-name target
 define _need_pylib =
     @$(SHELL_VERBOSE) \
-    if ! echo -e "import sys\ntry:\n\timport $(1)\nexcept ImportError:\n\tsys.exit(1)" | $(PYTHON); then \
+    if ! echo -e "import sys\ntry:\n\timport $(1)\nexcept ImportError:\n\tsys.exit(1)" | $(TT_PYTHON) > /dev/null; then \
         echo -e "\e[31mError: missing python '$(1)', $(2) it with \e[32m$(3)\e[0m"; \
         exit 1; \
     fi
