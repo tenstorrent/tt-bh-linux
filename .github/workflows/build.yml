@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CI_JOB_ID: ${{ github.run_id }}
 
     steps:
     - uses: actions/checkout@v4
