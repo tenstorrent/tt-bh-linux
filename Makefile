@@ -212,8 +212,8 @@ install_ttsmi: _need_pipx
 # Install tt-kmd
 install_ttkmd: _need_dkms _need_ttkmd_tree
 	cd tt-kmd && sudo dkms add .
-	cd tt-kmd && sudo dkms install tenstorrent/1.34
-	cd tt-kmd && sudo modprobe -v tenstorrent
+	sudo dkms install tenstorrent/1.34
+	sudo modprobe -v tenstorrent
 
 #################################
 # Recipes that clone git trees
