@@ -146,6 +146,8 @@ clean_all: clean_builds clean_downloads
 # Clean outputs from local builds (not downloads)
 clean_builds: clean_linux clean_opensbi clean_hosttool
 
+clean: clean_builds
+
 # Remove all downloaded files
 clean_downloads:
 	rm -f rootfs.ext4
@@ -342,6 +344,7 @@ endef
 	build_hosttool \
 	build_linux \
 	build_opensbi \
+	clean \
 	clean_all \
 	clean_builds \
 	clean_downloads \
