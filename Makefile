@@ -13,6 +13,10 @@ ifndef TT_PYTHON
     TT_PYTHON := ./ttsmi-python
 endif
 
+# Default riscv64 disk image file. Change this to point at your local image
+# if you have one
+DISK_IMAGE := rootfs.ext4
+
 # Use bash as the shell
 SHELL := /bin/bash
 
@@ -60,7 +64,7 @@ help:
 
 # Boot the Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen
-	$(TT_PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	$(TT_PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
 
 # Run tt-smi
@@ -128,8 +132,8 @@ build_hosttool: _need_gcc
 # Generate a SSH key and add it to the image
 build_ssh_key: _need_e2tools
 	if [ ! -e user ]; then ssh-keygen -f user -N ''; fi
-	e2mkdir -G 1000 -O 1000 -P 755 rootfs.ext4:/home/debian/.ssh
-	e2cp -G 1000 -O 1000 -P 600 user.pub rootfs.ext4:/home/debian/.ssh/authorized_keys
+	e2mkdir -G 1000 -O 1000 -P 755 $(DISK_IMAGE):/home/debian/.ssh
+	e2cp -G 1000 -O 1000 -P 600 user.pub $(DISK_IMAGE):/home/debian/.ssh/authorized_keys
 
 # Build everything
 build_all: build_linux build_opensbi build_hosttool
@@ -173,7 +177,7 @@ clean: clean_builds
 
 # Remove all downloaded files
 clean_downloads:
-	rm -f rootfs.ext4
+	rm -f $(DISK_IMAGE)
 
 #################################
 # Recipes that install packages
@@ -260,12 +264,12 @@ endef
 download_rootfs: _need_wget _need_unxz
 	@$(SHELL_VERBOSE) \
 	set -eo pipefail; \
-	if [ -f rootfs.ext4 ]; then \
-		echo "rootfs.ext4 already exists, skipping download."; \
+	if [ -f $(DISK_IMAGE) ]; then \
+		echo "$(DISK_IMAGE) already exists, skipping download."; \
 		exit 0; \
 	fi; \
 	set -x ; \
-	$(call wget,rootfs.ext4,https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img)
+	$(call wget,$(DISK_IMAGE),https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img)
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
@@ -289,7 +293,7 @@ _need_dtb:
 	$(call _need_file,blackhole-p100.dtb,build,build_linux)
 
 _need_rootfs:
-	$(call _need_file,rootfs.ext4,build,download_rootfs)
+	$(call _need_file,$(DISK_IMAGE),build,download_rootfs)
 
 _need_hosttool:
 	$(call _need_file,console/tt-bh-linux,build,build_hosttool)
