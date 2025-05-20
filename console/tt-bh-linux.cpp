@@ -3,7 +3,8 @@
 
 #include <atomic>
 #include "console.hpp"
-#include "rng.hpp"
+#include "disk.hpp"
+#include "network.hpp"
 
 std::atomic<bool> exit_thread_flag{false};
 
@@ -26,9 +27,16 @@ void console_main(int l2cpu){
     }
 }
 
-void rng_main(int l2cpu){
+void disk_main(int l2cpu){
     while (!exit_thread_flag){
-      rng_loop(l2cpu, exit_thread_flag);
+      disk::disk_loop(l2cpu, exit_thread_flag);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void network_main(int l2cpu){
+    while (!exit_thread_flag){
+      network::network_loop(l2cpu, exit_thread_flag);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
@@ -70,8 +78,10 @@ int main(int argc, char **argv){
         exit(1);
     }
 
-  std::thread console_thread(console_main, l2cpu);
-  std::thread rng_thread(rng_main, l2cpu);
-  console_thread.join();
-  rng_thread.join();
+//   std::thread console_thread(console_main, l2cpu);
+  std::thread disk_thread(disk_main, l2cpu);
+  std::thread network_thread(network_main, l2cpu);
+//   console_thread.join();
+  disk_thread.join();
+  network_thread.join();
 }

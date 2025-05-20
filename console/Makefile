@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
 # SPDX-License-Identifier: Apache-2.0
-CXXFLAGS := -Wall -O2 -MMD -MP
+CXXFLAGS := -Wall -fpermissive -O2 -MMD -MP -g
 LDLIBS := -lvdeslirp -lslirp
 LINK.o := $(LINK.cc)
 

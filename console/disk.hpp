@@ -1,14 +1,3 @@
-// SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
-// SPDX-License-Identifier: Apache-2.0
-
-#pragma once
-
-#include <stdint.h>
-#include <string.h>
-#include <slirp/libslirp.h>
-#include <sys/time.h>
-#include <sys/select.h>
-#include <signal.h>
 #include <atomic>
 #include <cassert>
 #include <cstdio>
@@ -17,7 +6,6 @@
 #include <iostream>
 #include <queue>
 #include <signal.h>
-#include <slirp/libslirp.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/select.h>
@@ -28,7 +16,7 @@
 extern "C" {
 #define class __class_compat // Rename 'class' to avoid C++ keyword conflict
 
-#include <linux/virtio_net.h>
+#include <linux/virtio_blk.h>
 #include <linux/virtio_ring.h>
 
 #ifdef class
@@ -38,18 +26,13 @@ extern "C" {
 
 #include "l2cpu.h"
 
-extern "C" {
-#include <slirp/libvdeslirp.h>
-}
-
-#define NETWORK_SHM_REGION_OFFSET ((4ULL * 1024 * 1024))
+#define DISK_SHM_REGION_OFFSET ((2ULL * 1024 * 1024))
 
 #define X280_REGISTERS 0xFFFFF7FEFFF10000ULL
-#define NETWORK_INTERRUPT_NUMBER 32
+#define DISK_INTERRUPT_NUMBER 33
 
 #define PACKET_SIZE 1514
-
-namespace network{
+namespace disk{
 struct base_config {
   uint32_t magic_value;
   uint32_t version;
@@ -109,7 +92,7 @@ struct base_config {
 
 struct shared_data {
   struct base_config base;
-  struct virtio_net_config device;
+  struct virtio_blk_config device;
 };
 
 uint32_t device_features_list[2];
@@ -117,13 +100,13 @@ uint32_t driver_features_list[2];
 
 #define QUEUE_SIZE 1024
 
-int network_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
+int disk_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
 
   L2CPU l2cpu(l2cpu_idx);
 
   // Assumes that 2M memory region is at the region just before the beginning of
   // th pmem, which itself is at the end of the dram
-  uint64_t address = l2cpu.get_starting_address() + l2cpu.get_memory_size() - NETWORK_SHM_REGION_OFFSET;
+  uint64_t address = l2cpu.get_starting_address() + l2cpu.get_memory_size() - DISK_SHM_REGION_OFFSET;
 
   uint64_t starting_address = l2cpu.get_starting_address();
 
@@ -137,7 +120,7 @@ int network_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
   // they should Only interrupts 0->5 are reserved, don't know if 6->9 are also
   // connected to something else Interrupts are triggered by setting bit
   // INTERRUPT_NUMBER-5 in the register referenced above
-  assert(NETWORK_INTERRUPT_NUMBER >= 10 && NETWORK_INTERRUPT_NUMBER <= 36);
+  assert(DISK_INTERRUPT_NUMBER >= 10 && DISK_INTERRUPT_NUMBER <= 36);
   auto interrupt_address_window =
       l2cpu.get_persistent_2M_tlb_window(interrupt_address);
   uint32_t *interrupt_register =
@@ -145,39 +128,44 @@ int network_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
 
   uint8_t* memory = l2cpu.get_memory_ptr();
 
-  SlirpConfig slirpcfg;
-  // slirpcfg.if_mru = PACKET_SIZE;
-  // slirpcfg.if_mtu = PACKET_SIZE;
-  struct vdeslirp *myslirp;
-  vdeslirp_init(&slirpcfg, VDE_INIT_DEFAULT);
-  myslirp = vdeslirp_open(&slirpcfg);
+  #define SECTOR_SIZE 512
+  int fd = open("debian-riscv64.img", O_RDWR);
+  if (fd == -1){
+    perror("Failed to open file");
+    return -1;
+  }
 
-  // Port Forwarding for SSH
-  struct in_addr host, guest;
-  inet_aton("127.0.0.1", &host);
-  inet_aton("10.0.2.15", &guest);
-  vdeslirp_add_fwd(myslirp, 0, host, 2222, guest, 22);
+  struct stat sb;
+  if (fstat(fd, &sb) == -1) {
+      perror("Failed to get file size");
+      close(fd);
+      return -1;
+  }
+  size_t file_size = sb.st_size;
+  size_t num_sectors = (file_size + SECTOR_SIZE - 1) / SECTOR_SIZE; // Ceiling division
+  printf("File size %lu", file_size);
+  printf("Nun sectors %lu", num_sectors);
 
-//   int len, ret_code;
-  int slirp_fd = vdeslirp_fd(myslirp);
-//   void *buf = malloc(PACKET_SIZE);
+  uint8_t *mapped_data = (uint8_t*)mmap(NULL, file_size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_PRIVATE, fd, 0);
+  if (mapped_data == MAP_FAILED) {
+      perror("Failed to mmap file");
+      close(fd);
+      return -1;
+  }
 
-  // Prevent writing into a closed socket (which may happen after a TCP reset)
-  // (which causes a SIGPIPE) from killing the process
-  signal(SIGPIPE, SIG_IGN);
 
   memset(base, 0, sizeof(struct shared_data));
   base->base.magic_value = 0x74726976;
   base->base.version = 0x2;
-  base->base.device_id = 1;
+  base->base.device_id = 2;
 
   base->base.device_features = 1;
-  device_features_list[0] = 2;
+  device_features_list[0] = 0;
   device_features_list[1] = 1;
 
   base->base.queue_num_max = QUEUE_SIZE;
 
-  // base->device.capacity = num_sectors;
+  base->device.capacity = num_sectors;
 
   // int len, ret_code;
 
@@ -198,13 +186,13 @@ int network_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
       break;
     }
   }
-#define NETWORK_NUM_QUEUES 2
-  struct vring_desc *desc[NETWORK_NUM_QUEUES];
-  struct vring_avail *avail[NETWORK_NUM_QUEUES];
-  struct vring_used *used[NETWORK_NUM_QUEUES];
-  uint64_t descriptor_table_address[NETWORK_NUM_QUEUES];
-  uint64_t available_ring_address[NETWORK_NUM_QUEUES];
-  uint64_t used_ring_address[NETWORK_NUM_QUEUES];
+#define DISK_NUM_QUEUES 1
+  struct vring_desc *desc[DISK_NUM_QUEUES];
+  struct vring_avail *avail[DISK_NUM_QUEUES];
+  struct vring_used *used[DISK_NUM_QUEUES];
+  uint64_t descriptor_table_address[DISK_NUM_QUEUES];
+  uint64_t available_ring_address[DISK_NUM_QUEUES];
+  uint64_t used_ring_address[DISK_NUM_QUEUES];
   // uint32_t queue_ready_list[2];
   // queue_ready_list[0] = 0;
   // queue_ready_list[1] = 0;
@@ -238,12 +226,12 @@ int network_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
              used_ring_address[queue_select]);
       //__sync_synchronize();
       // if (queue_ready_list[NUM_QUEUES - 1] == 1)
-      if (queue_select == (NETWORK_NUM_QUEUES - 1))
+      if (queue_select == (DISK_NUM_QUEUES - 1))
         break;
     }
     usleep(1);
   }
-  for (int i = 0; i < NETWORK_NUM_QUEUES; i++) {
+  for (int i = 0; i < DISK_NUM_QUEUES; i++) {
     printf("%ld %ld %ld\n", descriptor_table_address[i],
            available_ring_address[i], used_ring_address[i]);
     desc[i] = (struct vring_desc*) (memory + (descriptor_table_address[i] - starting_address));
@@ -251,21 +239,15 @@ int network_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
     used[i] = (struct vring_used*) (memory + (used_ring_address[i] - starting_address));
   }
   // Initialization phase done?
-  uint16_t tx_idx = 0, rx_idx=0, idx;
-  volatile struct vring_desc *desc_q = desc[1];
-  volatile struct vring_avail *avail_q = avail[1];
-  volatile struct vring_used *used_q = used[1];
+  uint16_t idx = 0;
+  volatile struct vring_desc *desc_q = desc[0];
+  volatile struct vring_avail *avail_q = avail[0];
+  volatile struct vring_used *used_q = used[0];
 
   while (!exit_thread_flag) {
     if (base->base.magic_value != 0x74726976) {
       return 0;
     }
-    struct timeval tv;
-    fd_set rfds;
-    FD_ZERO(&rfds);
-    FD_SET(slirp_fd, &rfds);
-    tv.tv_sec = 0;
-    tv.tv_usec = 1;
 
     __sync_synchronize();
     uint32_t queue_notify = base->base.queue_notify;
@@ -275,68 +257,16 @@ int network_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
       base->base.interrupt_status = ~1 & interrupt_status;
       base->base.interrupt_ack = ~1 & interrupt_ack;
       *interrupt_register =
-          (*interrupt_register) & ~(1 << (NETWORK_INTERRUPT_NUMBER - 5));
+          (*interrupt_register) & ~(1 << (DISK_INTERRUPT_NUMBER - 5));
       // printf("Unsetting interrupt\n");
     }
-    int ret_code = select(slirp_fd + 1, &rfds, NULL, NULL, &tv);
-    if (ret_code > 0){
-        idx = rx_idx;
-        desc_q = desc[0];
-        used_q = used[0];
-        avail_q = avail[0];
-       // Send bytes to driver
-      uint16_t avail_idx = avail_q->idx;
-      // qemu_log("rx_idx: %u avail_rx->idx %u\n", rx_idx, avail_idx);
-      if (idx != avail_idx) {
-        uint16_t desc_idx = avail_q->ring[idx % QUEUE_SIZE];
-        uint16_t used_idx = used_q->idx;
-        // uint64_t l = desc_rx[desc_idx].len;
-        uint64_t a = desc_q[desc_idx % QUEUE_SIZE].addr;
-        uint8_t *addr = memory + (a - starting_address);
-        
-        struct virtio_net_hdr_mrg_rxbuf *hdr =
-        reinterpret_cast<struct virtio_net_hdr_mrg_rxbuf *>(addr);
-        printf("Send len: %d sizeof: %d flags: %d\n", desc_q[desc_idx].len, sizeof(struct virtio_net_hdr_mrg_rxbuf), hdr->hdr.flags);
-        hdr->hdr.flags=0;
-        hdr->num_buffers = 1;
-        hdr->hdr.gso_type = 0;
-        hdr->hdr.gso_size = 0;
-
-        uint8_t buffer[PACKET_SIZE];
-        uint64_t len;
-        // qemu_log("Flags: %d Len: %lu\n", desc_rx[desc_idx].flags, l);
-        len = vdeslirp_recv(myslirp, buffer, PACKET_SIZE);
-        memcpy(addr + sizeof(struct virtio_net_hdr_mrg_rxbuf), buffer, len);
-        printf("Send len: %d\n", len);
-        // for(uint32_t i=sizeof(struct virtio_net_hdr_mrg_rxbuf);i<len+sizeof(struct virtio_net_hdr_mrg_rxbuf);i++){
-        //     printf("%02x ", addr[i]);
-        // }
-        // printf("\n");
-
-        used_q->ring[used_idx % QUEUE_SIZE].id = desc_idx;
-        used_q->ring[used_idx % QUEUE_SIZE].len =
-            len + sizeof(struct virtio_net_hdr_mrg_rxbuf);
-        __sync_synchronize();
-        used_q->idx = used_idx + 1;
-        __sync_synchronize();
-        base->base.interrupt_status = 1 | interrupt_status;
-        *interrupt_register = (1 << (NETWORK_INTERRUPT_NUMBER - 5));
-        // qemu_log("Setting interrupt\n");
-        idx += 1;
-        // printf("Send %d %lld\n", rx_idx, len);
-      }
-      rx_idx = idx;
-    }
-    if (queue_notify == 1) {
-        idx = tx_idx;
-        desc_q = desc[1];
-        used_q = used[1];
-        avail_q = avail[1];
+    if (queue_notify == 0) {
       // Get bytes transmitted by driver
       __sync_synchronize();
       uint16_t avail_idx = avail_q->idx;
       if (idx != avail_idx) {
-        // printf("idx: %u avail->tx_idx %u flags %d\n", idx, avail_idx, avail_q->flags);
+        // printf("idx: %u avail->tx_idx %u flags %d\n", idx, avail_idx,
+        //        avail_q->flags);
         uint16_t desc_idx = avail_q->ring[idx % QUEUE_SIZE];
         uint16_t desc_idx_head = desc_idx;
         uint16_t used_idx = used_q->idx;
@@ -344,38 +274,52 @@ int network_loop(int l2cpu_idx, std::atomic<bool> &exit_thread_flag) {
         uint64_t num_bytes_written = 0;
         uint64_t l = desc_q[desc_idx % QUEUE_SIZE].len;
         uint64_t a = desc_q[desc_idx % QUEUE_SIZE].addr;
-        uint8_t *addr = memory + (a - starting_address);
+        uint8_t *addr = memory + (a - starting_address);;
 
-        struct virtio_net_hdr_mrg_rxbuf *req = (struct virtio_net_hdr_mrg_rxbuf *) addr;
-        uint8_t buffer[PACKET_SIZE];
-        uint64_t len = l-sizeof(virtio_net_hdr_mrg_rxbuf);
-        memcpy(buffer, addr + sizeof(struct virtio_net_hdr_mrg_rxbuf), len);
-        printf("Recv len: %d sizeof: %d flags %d\n", desc_q[desc_idx].len, sizeof(struct virtio_net_hdr_mrg_rxbuf), req->hdr.flags);
-        // for(uint32_t i=0;i<len;i++){
-        //     printf("%02x ", buffer[i]);
-        // }
-        // printf("\n");
-        int slirp_ret = vdeslirp_send(myslirp, buffer, len);
-        if (slirp_ret < 0) {
-          printf("slirp_ret %d\n", slirp_ret);
+        struct virtio_blk_outhdr *req = (struct virtio_blk_outhdr *)addr;
+        if (req->type !=0 && req->type !=1)
+          printf("Type: %d Sector: %llu\n", req->type, req->sector);
+        while (true) {
+          if (req->type !=0 && req->type !=1)
+            printf("Flags: %d Len: %u\n", desc_q[desc_idx].flags, desc_q[desc_idx].len);
+          l = desc_q[desc_idx % QUEUE_SIZE].len;
+          a = desc_q[desc_idx % QUEUE_SIZE].addr;
+          addr = memory + (a - starting_address);
+
+          if (num_bytes_written < sizeof(struct virtio_blk_outhdr)) {
+          } else if ((desc_q[desc_idx].flags & 1)) {
+            if (req->type==0){
+              memcpy(addr, mapped_data + ((SECTOR_SIZE * req->sector) + num_bytes_written-sizeof(struct virtio_blk_outhdr)), l);
+            } else if (req->type==1){
+              memcpy(mapped_data + ((SECTOR_SIZE * req->sector) + num_bytes_written-sizeof(struct virtio_blk_outhdr)), addr, l);
+            }
+          } else {
+            *addr = 0;
+            // num_bytes_written += 1;
+            break;
+          }
+          num_bytes_written += l;
+          desc_idx = desc_q[desc_idx % QUEUE_SIZE].next;
         }
 
         used_q->ring[used_idx % QUEUE_SIZE].id = desc_idx_head;
-        used_q->ring[used_idx % QUEUE_SIZE].len = 0;
+        used_q->ring[used_idx % QUEUE_SIZE].len =
+            num_bytes_written - sizeof(struct virtio_blk_outhdr);
         __sync_synchronize();
         used_q->idx = used_idx + 1;
         __sync_synchronize();
         base->base.interrupt_status = 1 | interrupt_status;
-        *interrupt_register = (1 << (NETWORK_INTERRUPT_NUMBER - 5));
+        *interrupt_register = (1 << (DISK_INTERRUPT_NUMBER - 5));
         __sync_synchronize();
         // printf("Setting interrupt\n");
         idx += 1;
         // printf("Recv %d\n", idx);
       }
-      tx_idx = idx;
     }
     usleep(1);
   }
+  munmap(mapped_data, file_size);
+  close(fd);
   return 0;
 }
 }
