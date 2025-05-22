@@ -58,7 +58,7 @@ help:
 # Recipes that run things
 
 # Boot the Blackhole RISC-V CPU
-boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_python _need_luwen
+boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen
 	$(TT_PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
 
@@ -67,7 +67,7 @@ ttsmi: _need_ttsmi
 	tt-smi
 
 # Connect to console (requires a booted RISC-V)
-connect:
+connect: _need_hosttool
 	./console/tt-bh-linux
 
 #################################
@@ -279,6 +279,9 @@ _need_dtb:
 
 _need_rootfs:
 	$(call _need_file,rootfs.ext4,build,download_rootfs)
+
+_need_hosttool:
+	$(call _need_file,console/tt-bh-linux,build,build_hosttool)
 
 _need_ttkmd:
 	$(call _need_file,/dev/tenstorrent/0,install,install_ttkmd)
