@@ -15,6 +15,10 @@ else
 	PYTHON := python
 endif
 
+# Default riscv64 disk image file. Change this to point at your local image
+# if you have one
+DISK_IMAGE := rootfs.ext4
+
 # Use bash as the shell
 SHELL := /bin/bash
 
@@ -28,6 +32,7 @@ help:
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    ttsmi                  # Run tt-smi"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
+	@echo "    ssh			  # SSH to machine (requires a booted RISC-V)"
 	@echo "    build_linux            # Build the kernel"
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
@@ -59,7 +64,7 @@ help:
 
 # Boot the Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen
-	$(TT_PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	$(TT_PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
 
 # Run tt-smi
@@ -69,6 +74,10 @@ ttsmi: _need_ttsmi
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool
 	./console/tt-bh-linux
+
+# Connect over SSH (requires a booted RISC-V)
+ssh: _need_ssh_key
+	ssh -F /dev/null -i user -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
 #################################
 # Recipes that build things
@@ -120,6 +129,12 @@ build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
 build_hosttool: _need_gcc
 	$(MAKE) -C console -j $(nproc) $(quiet_make)
 
+# Generate a SSH key and add it to the image
+build_ssh_key: _need_e2tools
+	if [ ! -e user ]; then ssh-keygen -f user -N ''; fi
+	e2mkdir -G 1000 -O 1000 -P 755 $(DISK_IMAGE):/home/debian/.ssh
+	e2cp -G 1000 -O 1000 -P 600 user.pub $(DISK_IMAGE):/home/debian/.ssh/authorized_keys
+
 # Build everything
 build_all: build_linux build_opensbi build_hosttool
 	@echo "Build complete! Now run 'make boot' to run Linux"
@@ -158,7 +173,7 @@ clean: clean_builds
 
 # Remove all downloaded files
 clean_downloads:
-	rm -f rootfs.ext4
+	rm -f $(DISK_IMAGE)
 
 #################################
 # Recipes that install packages
@@ -191,7 +206,7 @@ install_qemu:
 
 # Install tools
 install_tool_pkgs:
-	$(call install,device-tree-compiler xz-utils unzip python3 cargo rustc dkms)
+	$(call install,device-tree-compiler xz-utils unzip python3 cargo rustc dkms e2tools)
 
 # Install libraries for compiling
 install_hosttool_pkgs:
@@ -239,12 +254,12 @@ endef
 download_rootfs: _need_wget _need_unxz
 	@$(SHELL_VERBOSE) \
 	set -eo pipefail; \
-	if [ -f rootfs.ext4 ]; then \
-		echo "rootfs.ext4 already exists, skipping download."; \
+	if [ -f $(DISK_IMAGE) ]; then \
+		echo "$(DISK_IMAGE) already exists, skipping download."; \
 		exit 0; \
 	fi; \
 	set -x ; \
-	$(call wget,rootfs.ext4,https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img)
+	$(call wget,$(DISK_IMAGE),https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img)
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
@@ -272,7 +287,7 @@ _need_dtb:
 	$(call _need_file,blackhole-p100.dtb,build,build_linux)
 
 _need_rootfs:
-	$(call _need_file,rootfs.ext4,build,download_rootfs)
+	$(call _need_file,$(DISK_IMAGE),build,download_rootfs)
 
 _need_hosttool:
 	$(call _need_file,console/tt-bh-linux,build,build_hosttool)
@@ -319,6 +334,12 @@ _need_wget:
 
 _need_unzip:
 	$(call _need_prog,unzip,install,install_tool_pkgs)
+
+_need_e2tools:
+	$(call _need_prog,e2cp,install,install_tool_pkgs)
+
+_need_ssh_key:
+	$(call _need_file,user,build_ssh_key)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
