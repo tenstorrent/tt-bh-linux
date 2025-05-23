@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
 // SPDX-License-Identifier: Apache-2.0
 
+#pragma once
+
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
@@ -139,6 +141,8 @@ int uart_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag) {
 
     uint64_t uart_base = desc->virtuart_base;
     printf("%lx", uart_base);
+
+    debug_descriptor_window.reset();
 
     auto queue_window = l2cpu.get_persistent_2M_tlb_window(uart_base);
     volatile queues* q = reinterpret_cast<volatile queues*>(queue_window->get_window());
