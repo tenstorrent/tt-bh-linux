@@ -12,7 +12,7 @@ endif
 ifneq ($(wildcard $(HOME)/.tenstorrent-venv/bin/python),)
 	PYTHON := $(HOME)/.tenstorrent-venv/bin/python
 else
-	PYTHON := python
+	PYTHON := python3
 endif
 
 # Default riscv64 disk image file. Change this to point at your local image
