@@ -97,6 +97,10 @@ for service in $MASKED_SERVICES; do
     systemctl --root $MOUNT mask $service
 done
 
+info "Enabling ssh empty password auth"
+mkdir -p $MOUNT/etc/ssh/sshd_config.d/
+echo "PermitEmptyPasswords yes" >> $MOUNT/etc/ssh/sshd_config.d/permit-empty-passwords.conf
+
 # TODO: Detect if not running in CI and copy the user's keys in
 # info "Copying SSH keys from $HOME/.ssh/*.pub"
 # mkdir -m700 $MOUNT/home/debian/.ssh/

@@ -68,3 +68,24 @@ jobs:
         gh release upload ${{ github.ref_name }} Image fw_jump.bin blackhole-p100.dtb
       env:
         GITHUB_TOKEN: ${{ github.token }}
+
+  generate_rootfs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -qq && sudo apt-get install -qq qemu-user-static qemu-utils debootstrap
+
+    - name: Build disk image 
+      run: |
+        sudo ./build-image.sh 
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: tt-bh-disk-image
+        path: |
+          debian-riscv64.img
