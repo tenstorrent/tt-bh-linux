@@ -7,11 +7,17 @@ ifeq ($(QUIET),1)
     quiet_make := -s
 endif
 
-# Default to the pipx python so we get pyluwen for running boot.py
-# Set TT_PYTHON in your environment to point to your own venv if you prefer
-ifndef TT_PYTHON
-    TT_PYTHON := ./ttsmi-python
+# Default to python env installed by tt-installer
+# If it doesn't exist, use python in current venv
+ifneq ($(wildcard $(HOME)/.tenstorrent-venv/bin/python),)
+	PYTHON := $(HOME)/.tenstorrent-venv/bin/python
+else
+	PYTHON := python
 endif
+
+# Default riscv64 disk image file. Change this to point at your local image
+# if you have one
+DISK_IMAGE := rootfs.ext4
 
 # Use bash as the shell
 SHELL := /bin/bash
@@ -26,6 +32,7 @@ help:
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    ttsmi                  # Run tt-smi"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
+	@echo "    ssh			  # SSH to machine (requires a booted RISC-V)"
 	@echo "    build_linux            # Build the kernel"
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
@@ -34,7 +41,6 @@ help:
 	@echo "    clean_linux            # Clean linux tree and remove binary"
 	@echo "    clean_opensbi          # Clean opensbi tree and remove binary"
 	@echo "    clean_hosttool         # Clean host tool tree and remove binary"
-	@echo "    clean_ttkmd            # Clean tt-kmd tree"
 	@echo "    clean_all              # Clean builds and downloads"
 	@echo "    clean_builds           # Clean outputs from local builds (not downloads)"
 	@echo "    clean_downloads        # Remove all downloaded files"
@@ -48,8 +54,7 @@ help:
 	@echo "    install_ttkmd          # Install tt-kmd"
 	@echo "    clone_linux            # Clone the Tenstorrent Linux kernel source tree"
 	@echo "    clone_opensbi          # Clone the Tenstorrent opensbi source tree"
-	@echo "    clone_ttkmd            # Clone the Tenstorrent tt-kmd source tree"
-	@echo "    clone_all              # Clone linux, opensbi and tt-kmd trees"
+	@echo "    clone_all              # Clone linux and opensbi trees"
 	@echo "    download_rootfs        # Download Ubuntu server 25.04 pre-installed rootfs"
 	@echo "    download_prebuilt      # Download prebuilt Linux, opensbi and dtb"
 	@echo "    download_all           # Download all preqrequisites"
@@ -59,7 +64,7 @@ help:
 
 # Boot the Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen
-	$(TT_PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin rootfs.ext4 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	$(TT_PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
 
 # Run tt-smi
@@ -69,6 +74,10 @@ ttsmi: _need_ttsmi
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool
 	./console/tt-bh-linux
+
+# Connect over SSH (requires a booted RISC-V)
+ssh: _need_ssh_key
+	ssh -F /dev/null -i user -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
 #################################
 # Recipes that build things
@@ -120,6 +129,12 @@ build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
 build_hosttool: _need_gcc
 	$(MAKE) -C console -j $(nproc) $(quiet_make)
 
+# Generate a SSH key and add it to the image
+build_ssh_key: _need_e2tools
+	if [ ! -e user ]; then ssh-keygen -f user -N ''; fi
+	e2mkdir -G 1000 -O 1000 -P 755 $(DISK_IMAGE):/home/debian/.ssh
+	e2cp -G 1000 -O 1000 -P 600 user.pub $(DISK_IMAGE):/home/debian/.ssh/authorized_keys
+
 # Build everything
 build_all: build_linux build_opensbi build_hosttool
 	@echo "Build complete! Now run 'make boot' to run Linux"
@@ -139,10 +154,6 @@ clean_opensbi:
 	if [ -d opensbi ]; then $(MAKE) -C opensbi -j $(nproc) $(quiet_make) clean; fi
 	rm -f fw_jump.bin
 
-# Clean tt-kmd tree
-clean_ttkmd:
-	-if [ -d tt-kmd ]; then $(MAKE) -C tt-kmd -j $(nproc) $(quiet_make) clean; fi
-
 # Clean host tool tree and remove binary
 clean_hosttool:
 	if [ -d console ]; then $(MAKE) -C console -j $(nproc) $(quiet_make) clean; fi
@@ -150,19 +161,19 @@ clean_hosttool:
 
 # Clean cloned trees
 clean_clones:
-	rm -rf linux opensbi tt-kmd
+	rm -rf linux opensbi
 
 # Clean builds and downloads
 clean_all: clean_builds clean_downloads clean_clones
 
 # Clean outputs from local builds (not downloads)
-clean_builds: clean_linux clean_opensbi clean_hosttool clean_ttkmd
+clean_builds: clean_linux clean_opensbi clean_hosttool
 
 clean: clean_builds
 
 # Remove all downloaded files
 clean_downloads:
-	rm -f rootfs.ext4
+	rm -f $(DISK_IMAGE)
 
 #################################
 # Recipes that install packages
@@ -195,22 +206,20 @@ install_qemu:
 
 # Install tools
 install_tool_pkgs:
-	$(call install,device-tree-compiler xz-utils unzip python3 pipx cargo rustc dkms)
+	$(call install,device-tree-compiler xz-utils unzip python3 cargo rustc dkms e2tools)
 
 # Install libraries for compiling
 install_hosttool_pkgs:
 	$(call install,libvdeslirp-dev libslirp-dev)
 
 # Install tt-smi
-install_ttsmi: _need_pipx _need_git
-	pipx install git+https://github.com/tenstorrent/tt-smi
-	@echo "Run 'pipx ensurepath' to update your PATH"
+install_ttsmi: run_tt_installer
 
 # Install tt-kmd
-install_ttkmd: _need_dkms _need_ttkmd_tree
-	cd tt-kmd && sudo dkms add .
-	sudo dkms install tenstorrent/1.34
-	sudo modprobe -v tenstorrent
+install_ttkmd: run_tt_installer
+
+run_tt_installer: download_tt_installer
+	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
 
 #################################
 # Recipes that clone git trees
@@ -230,12 +239,8 @@ clone_linux: _need_git
 clone_opensbi: _need_git
 	$(call _clone,https://github.com/tenstorrent/opensbi,opensbi,tt-blackhole)
 
-# Clone the Tenstorrent tt-kmd source tree
-clone_ttkmd: _need_git
-	$(call _clone,https://github.com/tenstorrent/tt-kmd,tt-kmd,main)
-
-# Clone linux, opensbi and tt-kmd trees
-clone_all: clone_linux clone_opensbi clone_ttkmd
+# Clone linux and opensbi trees
+clone_all: clone_linux clone_opensbi
 
 #################################
 # Recipes that download things
@@ -249,15 +254,16 @@ endef
 download_rootfs: _need_wget _need_unxz
 	@$(SHELL_VERBOSE) \
 	set -eo pipefail; \
-	if [ -f rootfs.ext4 ]; then \
-		echo "rootfs.ext4 already exists, skipping download."; \
+	if [ -f $(DISK_IMAGE) ]; then \
+		echo "$(DISK_IMAGE) already exists, skipping download."; \
 		exit 0; \
 	fi; \
 	set -x ; \
 	# TODO: Test this once repo is public
-	$(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/actions/runs/15185171296/artifacts/3176305267)
-	unzip tt-bh-disk-image.zip
-	mv debian-riscv64.img rootfs.ext4
+	# $(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/actions/runs/15185171296/artifacts/3176305267)
+	# unzip tt-bh-disk-image.zip
+	# mv debian-riscv64.img rootfs.ext4
+	$(call wget,$(DISK_IMAGE),https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img)
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
@@ -265,6 +271,10 @@ download_prebuilt: _need_wget _need_unzip
 	$(call wget,tt-bh-linux.zip,https://github.com/tenstorrent/tt-bh-linux/actions/runs/15199122669/artifacts/3181567565)
 	unzip tt-bh-linux.zip
 	rm tt-bh-linux.zip
+
+download_tt_installer:
+	$(call wget,tt-installer-v1.1.0.sh,https://github.com/tenstorrent/tt-installer/releases/download/v1.1.0/install.sh)
+	chmod u+x tt-installer-v1.1.0.sh
 
 download_all: download_rootfs download_prebuilt
 
@@ -281,7 +291,7 @@ _need_dtb:
 	$(call _need_file,blackhole-p100.dtb,build,build_linux)
 
 _need_rootfs:
-	$(call _need_file,rootfs.ext4,build,download_rootfs)
+	$(call _need_file,$(DISK_IMAGE),build,download_rootfs)
 
 _need_hosttool:
 	$(call _need_file,console/tt-bh-linux,build,build_hosttool)
@@ -295,9 +305,6 @@ _need_linux_tree:
 
 _need_opensbi_tree:
 	$(call _need_file,opensbi,clon,clone_opensbi)
-
-_need_ttkmd_tree:
-	$(call _need_file,tt-kmd,clon,clone_ttkmd)
 
 _need_dkms:
 	$(call _need_prog,dkms,install,install_dkms)
@@ -313,9 +320,6 @@ _need_git:
 
 _need_luwen:
 	$(call _need_pylib,pyluwen,install,install_ttsmi)
-
-_need_pipx:
-	$(call _need_prog,pipx,install,install_tool_pkgs)
 
 _need_python:
 	$(call _need_prog,python3,install,install_tool_pkgs)
@@ -334,6 +338,12 @@ _need_wget:
 
 _need_unzip:
 	$(call _need_prog,unzip,install,install_tool_pkgs)
+
+_need_e2tools:
+	$(call _need_prog,e2cp,install,install_tool_pkgs)
+
+_need_ssh_key:
+	$(call _need_file,user,build_ssh_key)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
@@ -363,11 +373,11 @@ define _need_prog =
 endef
 
 # _need_pylib: Check if a python package exists, and if not tell the user how to install it
-# NB. This uses TT_PYTHON.
+# NB. This uses PYTHON.
 # args: python-package action-name target
 define _need_pylib =
     @$(SHELL_VERBOSE) \
-    if ! echo -e "import sys\ntry:\n\timport $(1)\nexcept ImportError:\n\tsys.exit(1)" | $(TT_PYTHON) > /dev/null; then \
+    if ! echo -e "import sys\ntry:\n\timport $(1)\nexcept ImportError:\n\tsys.exit(1)" | $(PYTHON) > /dev/null; then \
         echo -e "\e[31mError: missing python '$(1)', $(2) it with \e[32m$(3)\e[0m"; \
         exit 1; \
     fi
@@ -387,15 +397,14 @@ endef
 	clean_hosttool \
 	clean_linux \
 	clean_opensbi \
-	clean_ttkmd \
 	clone_all \
 	clone_linux \
 	clone_opensbi \
-	clone_ttkmd \
 	connect \
 	download_all \
 	download_prebuilt \
 	download_rootfs \
+	download_tt_installer \
 	help \
 	install_all \
 	install_hosttool_pkgs \
@@ -405,6 +414,7 @@ endef
 	install_tool_pkgs \
 	install_ttkmd \
 	install_ttsmi \
+	run_tt_installer \
 	_need_dkms \
 	_need_dtb \
 	_need_dtc \
@@ -420,7 +430,6 @@ endef
 	_need_riscv64_toolchain \
 	_need_rootfs \
 	_need_ttkmd \
-	_need_ttkmd_tree \
 	_need_ttsmi \
 	_need_unxz \
 	_need_unzip \
