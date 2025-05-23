@@ -25,13 +25,11 @@ git clone git@github.com:tenstorrent/tt-bh-linux
 cd tt-bh-linux
 make install_all
 make install_ttsmi
-make build_all # TODO: make download_all instead? It's currently broken.
+make build_all
 make download_rootfs
 make boot
 ```
-Log in with user: `root`, password: `root`. Quit with `Ctrl-A x`. Quitting will
-leave Linux running. Re-run `console/tt-bh-linux` or `make connect` to
-re-establish both console and network connectivity.
+Log in with user: `root`, password: `root`. Quit with `Ctrl-A x`.
 
 
 ## Blackhole Hardware
@@ -50,14 +48,6 @@ re-establish both console and network connectivity.
   * Also refered to as TLBs or NOC TLBs
   * 2MB and 128GB varieties
   * Allows software running on X280 to access arbitrary locations on the NOC
-* For silicon yield purposes, some cores are disabled
-  * Software refers to disabled cores as _harvested_
-  * p100a harvesting: 1x DRAM controller (28GB total DRAM); 20x Tensix (120x
-total)
-  * p150a/b harvesting: DRAM and Tensix are not harvested (32GB total DRAM; 140x
-Tensix cores)
-  * DRAM controller harvesting on p100a cards affects L2CPU usability (see
-diagram)
 * The first two L2CPU blocks each have 4GB of DRAM attached; the second two
 L2CPU blocks share 4GB of DRAM (see diagram)
 ```
@@ -169,7 +159,6 @@ This is automated by `make boot`.
   executing OpenSBI
   * configures X280 L2 prefetcher with parameters recommended by SiFive
 * Invoke tt-bh-linux program (establishes console and network access)
-* TODO: SSH into the system (How?)
 
 ## FAQ
 
@@ -191,14 +180,78 @@ user and printing character output from OpenSBI/Linux
 
 ### How does the network work?
 * A [kernel driver](https://github.com/tenstorrent/linux/tree/tt-blackhole/drivers/net/ethernet/tenstorrent)
-(on the X280 side) owns TX and RX circular buffers
+(on the X280 side) owns TX and RX circular buffers and uses them in a manner 
+very similar to the console program
 * `tt-bh-linux` knows the location of these buffers and uses
 [libslirp](https://gitlab.freedesktop.org/slirp/libslirp) to provide a host-side
 interface
 * Via slirp, the host side provides DHCP to the X280 side
+* Unlike the console, the X280 driver receives interrupts initiated by the host
+* The host program is polling-based
 
 ### What is the X280's address map?
-TODO: are we allowed to share this?
+| Base             | Top              | PMA    | Description                 |
+|------------------|------------------|--------|-----------------------------|
+| 0x0000_0000_0000 | 0x0000_0000_0FFF |        | Debug                       |
+| 0x0000_0000_1000 | 0x0000_0000_2FFF |        | Unmapped                    |
+| 0x0000_0000_3000 | 0x0000_0000_3FFF | RWX A  | Error Device                |
+| 0x0000_0000_4000 | 0x0000_0000_4FFF | RW A   | Test Indicator              |
+| 0x0000_0000_5000 | 0x0000_016F_FFFF |        | Unmapped                    |
+| 0x0000_0170_0000 | 0x0000_0170_0FFF | RW A   | Hart 0 Bus-Error Unit       |
+| 0x0000_0170_1000 | 0x0000_0170_1FFF | RW A   | Hart 1 Bus-Error Unit       |
+| 0x0000_0170_2000 | 0x0000_0170_2FFF | RW A   | Hart 2 Bus-Error Unit       |
+| 0x0000_0170_3000 | 0x0000_0170_3FFF | RW A   | Hart 3 Bus-Error Unit       |
+| 0x0000_0170_4000 | 0x0000_01FF_FFFF |        | Unmapped                    |
+| 0x0000_0200_0000 | 0x0000_0200_FFFF | RW A   | CLINT                       |
+| 0x0000_0201_0000 | 0x0000_0201_3FFF | RW A   | L3 Cache Controller         |
+| 0x0000_0201_4000 | 0x0000_0202_FFFF |        | Unmapped                    |
+| 0x0000_0203_0000 | 0x0000_0203_1FFF | RW A   | Hart 0 L2 Prefetcher        |
+| 0x0000_0203_2000 | 0x0000_0203_3FFF | RW A   | Hart 1 L2 Prefetcher        |
+| 0x0000_0203_4000 | 0x0000_0203_5FFF | RW A   | Hart 2 L2 Prefetcher        |
+| 0x0000_0203_6000 | 0x0000_0203_7FFF | RW A   | Hart 3 L2 Prefetcher        |
+| 0x0000_0203_8000 | 0x0000_0300_7FFF |        | Unmapped                    |
+| 0x0000_0300_8000 | 0x0000_0300_8FFF | RW A   | SLPC                        |
+| 0x0000_0300_9000 | 0x0000_07FF_FFFF |        | Unmapped                    |
+| 0x0000_0800_0000 | 0x0000_081F_FFFF | RWX A  | L3 LIM                      |
+| 0x0000_0820_0000 | 0x0000_09FF_FFFF |        | Unmapped                    |
+| 0x0000_0A00_0000 | 0x0000_0A1F_FFFF | RWXIDA | L3 Zero Device              |
+| 0x0000_0A20_0000 | 0x0000_0BFF_FFFF |        | Unmapped                    |
+| 0x0000_0C00_0000 | 0x0000_0FFF_FFFF | RW A   | PLIC                        |
+| 0x0000_1000_0000 | 0x0000_1000_0FFF | RW A   | Trace Encoder 0             |
+| 0x0000_1000_1000 | 0x0000_1000_1FFF | RW A   | Trace Encoder 1             |
+| 0x0000_1000_2000 | 0x0000_1000_2FFF | RW A   | Trace Encoder 2             |
+| 0x0000_1000_3000 | 0x0000_1000_3FFF | RW A   | Trace Encoder 3             |
+| 0x0000_1000_4000 | 0x0000_1001_7FFF |        | Unmapped                    |
+| 0x0000_1001_8000 | 0x0000_1001_8FFF | RW A   | Trace Funnel                |
+| 0x0000_1001_9000 | 0x0000_1010_3FFF |        | Unmapped                    |
+| 0x0000_1010_4000 | 0x0000_1010_7FFF | RW A   | Hart 0 Private L2 Cache     |
+| 0x0000_1010_8000 | 0x0000_1010_BFFF | RW A   | Hart 1 Private L2 Cache     |
+| 0x0000_1010_C000 | 0x0000_1010_FFFF | RW A   | Hart 2 Private L2 Cache     |
+| 0x0000_1011_0000 | 0x0000_1011_3FFF | RW A   | Hart 3 Private L2 Cache     |
+| 0x0000_1011_4000 | 0x0000_1FFF_FFFF |        | Unmapped                    |
+| 0x0000_2000_0000 | 0x0000_2FFF_FFFF | RWXI A | Peripheral Port (256 MiB)   |
+| 0x0000_3000_0000 | 0x4000_2FFF_FFFF | RWXI   | System Port (64 TiB)        |
+| 0x4000_3000_0000 | 0x7FFF_FFFF_FFFF | RWXIDA | Memory Port (64.0 TiB)      |
+| 0x8000_0000_0000 | 0xFFFF_FFFF_FFFF |        | Unmapped                    |
+
+Physical Memory Attributes:
+* **R**–Read
+* **W**–Write
+* **X**–Execute
+* **I**–Instruction Cacheable
+* **D**–Data Cacheable
+* **A**–Atomics
+
+### System, Memory, Peripheral Ports?
+System Port and Memory Port differ only by PMA. The bottom 4 GB of these regions
+is mapped to the 4 GB of memory controlled by the adjacent DRAM controller. Note
+that L2CPU instances 2 and 3 share the same 4 GB of DRAM.
+
+From the perspective of the NOC, accesses targeting the memory port are coherent
+with the X280's cache subsystem.
+
+The peripheral port contains registers for e.g. DMA controller and NOC TLBs.
+These may be documented in a future release.
 
 ### What is Luwen? pyluwen?
 [Luwen]([luwen](https://github.com/tenstorrent/luwen/)) is a library written in
@@ -211,3 +264,46 @@ provided.
 
 ### Why is `tt-bh-linux`'s console output corrupted?
 You probably have multiple instances of it running against one L2CPU.
+
+### What is harvesting?
+For silicon yield purposes, cores within the grid may be disabled. Software
+refers to disabled cores as _harvested_.
+* p100a: 1 DRAM controller is harvested (for 28GB of total DRAM); 20x Tensix
+cores are harvested (for a total of 120)
+* p150a/b harvesting: DRAM and Tensix are not harvested (32GB total DRAM; 140x
+Tensix cores)
+
+### How does DRAM harvesting affect L2CPU usage?
+If your p100a has an L2CPU0 block with a harvested DRAM controller, booting will
+fail. Use an alternate L2CPU instance with e.g. `--l2cpu 1`.
+
+Associating an L2CPU block with alternate DRAM is possible via NOC TLB mappings,
+although the latency is higher. Configuring this requires device tree and boot
+script modifications.
+
+### How do I access an X280's address space from the Linux host?
+The console and network programs have examples of how to do this. The steps are:
+* Configure an inbound TLB window using the (x, y) location of the target and
+desired address; mmap the window into your application's address space
+* The address must be aligned to the window size (2MB or 4GB)
+* On an x86_64 host, you can mmap the window as write combined (WC) or unached
+(UC)
+* Reads and writes to the window result in NOC access to the target
+
+### What are the NOC0 coordinates of the L2CPU blocks?
+* L2CPU0: (8, 3)
+* L2CPU1: (8, 9)
+* L2CPU2: (8, 5)
+* L2CPU3: (8, 7)
+
+### NOC0?
+There are two independent NOCs: NOC0 and NOC1. Only NOC0 is used in this demo.
+NOC1 coordinates of the L2CPU blocks are as follows.
+* L2CPU0: (8, 8)
+* L2CPU1: (8, 2)
+* L2CPU2: (8, 6)
+* L2CPU3: (8, 4)
+
+### How do I recover a hung or misbehaving chip?
+Use `tt-smi` to perform a reset: `tt-smi -r 0` resets device 0. If this is 
+unsuccessful, a power cycle is recommended.
