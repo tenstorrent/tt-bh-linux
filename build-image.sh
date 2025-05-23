@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
 # Create an ext4 rootfs with Debian debootstrap
 # Runs as root, and requires binfmt-misc to be set up so the host can run
 # riscv64 binaries

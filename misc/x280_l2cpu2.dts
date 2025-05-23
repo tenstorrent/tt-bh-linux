@@ -1,4 +1,6 @@
 /dts-v1/;
+// SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
 
 / {
     #address-cells = <0x2>;
