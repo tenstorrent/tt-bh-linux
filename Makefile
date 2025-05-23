@@ -7,10 +7,12 @@ ifeq ($(QUIET),1)
     quiet_make := -s
 endif
 
-# Default to the pipx python so we get pyluwen for running boot.py
-# Set TT_PYTHON in your environment to point to your own venv if you prefer
-ifndef TT_PYTHON
-    TT_PYTHON := ./ttsmi-python
+# Default to python env installed by tt-installer
+# If it doesn't exist, use python in current venv
+ifneq ($(wildcard $(HOME)/.tenstorrent-venv/bin/python),)
+	PYTHON := $(HOME)/.tenstorrent-venv/bin/python
+else
+	PYTHON := python
 endif
 
 # Default riscv64 disk image file. Change this to point at your local image
@@ -39,7 +41,6 @@ help:
 	@echo "    clean_linux            # Clean linux tree and remove binary"
 	@echo "    clean_opensbi          # Clean opensbi tree and remove binary"
 	@echo "    clean_hosttool         # Clean host tool tree and remove binary"
-	@echo "    clean_ttkmd            # Clean tt-kmd tree"
 	@echo "    clean_all              # Clean builds and downloads"
 	@echo "    clean_builds           # Clean outputs from local builds (not downloads)"
 	@echo "    clean_downloads        # Remove all downloaded files"
@@ -53,8 +54,7 @@ help:
 	@echo "    install_ttkmd          # Install tt-kmd"
 	@echo "    clone_linux            # Clone the Tenstorrent Linux kernel source tree"
 	@echo "    clone_opensbi          # Clone the Tenstorrent opensbi source tree"
-	@echo "    clone_ttkmd            # Clone the Tenstorrent tt-kmd source tree"
-	@echo "    clone_all              # Clone linux, opensbi and tt-kmd trees"
+	@echo "    clone_all              # Clone linux and opensbi trees"
 	@echo "    download_rootfs        # Download Ubuntu server 25.04 pre-installed rootfs"
 	@echo "    download_prebuilt      # Download prebuilt Linux, opensbi and dtb"
 	@echo "    download_all           # Download all preqrequisites"
@@ -154,10 +154,6 @@ clean_opensbi:
 	if [ -d opensbi ]; then $(MAKE) -C opensbi -j $(nproc) $(quiet_make) clean; fi
 	rm -f fw_jump.bin
 
-# Clean tt-kmd tree
-clean_ttkmd:
-	-if [ -d tt-kmd ]; then $(MAKE) -C tt-kmd -j $(nproc) $(quiet_make) clean; fi
-
 # Clean host tool tree and remove binary
 clean_hosttool:
 	if [ -d console ]; then $(MAKE) -C console -j $(nproc) $(quiet_make) clean; fi
@@ -165,13 +161,13 @@ clean_hosttool:
 
 # Clean cloned trees
 clean_clones:
-	rm -rf linux opensbi tt-kmd
+	rm -rf linux opensbi
 
 # Clean builds and downloads
 clean_all: clean_builds clean_downloads clean_clones
 
 # Clean outputs from local builds (not downloads)
-clean_builds: clean_linux clean_opensbi clean_hosttool clean_ttkmd
+clean_builds: clean_linux clean_opensbi clean_hosttool
 
 clean: clean_builds
 
@@ -210,22 +206,20 @@ install_qemu:
 
 # Install tools
 install_tool_pkgs:
-	$(call install,device-tree-compiler xz-utils unzip python3 pipx cargo rustc dkms e2tools)
+	$(call install,device-tree-compiler xz-utils unzip python3 cargo rustc dkms e2tools)
 
 # Install libraries for compiling
 install_hosttool_pkgs:
 	$(call install,libvdeslirp-dev libslirp-dev)
 
 # Install tt-smi
-install_ttsmi: _need_pipx _need_git
-	pipx install git+https://github.com/tenstorrent/tt-smi
-	@echo "Run 'pipx ensurepath' to update your PATH"
+install_ttsmi: run_tt_installer
 
 # Install tt-kmd
-install_ttkmd: _need_dkms _need_ttkmd_tree
-	cd tt-kmd && sudo dkms add .
-	sudo dkms install tenstorrent/1.34
-	sudo modprobe -v tenstorrent
+install_ttkmd: run_tt_installer
+
+run_tt_installer: download_tt_installer
+	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
 
 #################################
 # Recipes that clone git trees
@@ -245,12 +239,8 @@ clone_linux: _need_git
 clone_opensbi: _need_git
 	$(call _clone,https://github.com/tenstorrent/opensbi,opensbi,tt-blackhole)
 
-# Clone the Tenstorrent tt-kmd source tree
-clone_ttkmd: _need_git
-	$(call _clone,https://github.com/tenstorrent/tt-kmd,tt-kmd,main)
-
-# Clone linux, opensbi and tt-kmd trees
-clone_all: clone_linux clone_opensbi clone_ttkmd
+# Clone linux and opensbi trees
+clone_all: clone_linux clone_opensbi
 
 #################################
 # Recipes that download things
@@ -277,6 +267,10 @@ download_prebuilt: _need_wget _need_unzip
 	$(call wget,tt-bh-linux.zip,https://github.com/tenstorrent/tt-bh-linux/actions/runs/14748198608/artifacts/3035601544)
 	unzip tt-bh-linux.zip
 	rm tt-bh-linux.zip
+
+download_tt_installer:
+	$(call wget,tt-installer-v1.1.0.sh,https://github.com/tenstorrent/tt-installer/releases/download/v1.1.0/install.sh)
+	chmod u+x tt-installer-v1.1.0.sh
 
 download_all: download_rootfs download_prebuilt
 
@@ -308,9 +302,6 @@ _need_linux_tree:
 _need_opensbi_tree:
 	$(call _need_file,opensbi,clon,clone_opensbi)
 
-_need_ttkmd_tree:
-	$(call _need_file,tt-kmd,clon,clone_ttkmd)
-
 _need_dkms:
 	$(call _need_prog,dkms,install,install_dkms)
 
@@ -325,9 +316,6 @@ _need_git:
 
 _need_luwen:
 	$(call _need_pylib,pyluwen,install,install_ttsmi)
-
-_need_pipx:
-	$(call _need_prog,pipx,install,install_tool_pkgs)
 
 _need_python:
 	$(call _need_prog,python3,install,install_tool_pkgs)
@@ -381,11 +369,11 @@ define _need_prog =
 endef
 
 # _need_pylib: Check if a python package exists, and if not tell the user how to install it
-# NB. This uses TT_PYTHON.
+# NB. This uses PYTHON.
 # args: python-package action-name target
 define _need_pylib =
     @$(SHELL_VERBOSE) \
-    if ! echo -e "import sys\ntry:\n\timport $(1)\nexcept ImportError:\n\tsys.exit(1)" | $(TT_PYTHON) > /dev/null; then \
+    if ! echo -e "import sys\ntry:\n\timport $(1)\nexcept ImportError:\n\tsys.exit(1)" | $(PYTHON) > /dev/null; then \
         echo -e "\e[31mError: missing python '$(1)', $(2) it with \e[32m$(3)\e[0m"; \
         exit 1; \
     fi
@@ -405,15 +393,14 @@ endef
 	clean_hosttool \
 	clean_linux \
 	clean_opensbi \
-	clean_ttkmd \
 	clone_all \
 	clone_linux \
 	clone_opensbi \
-	clone_ttkmd \
 	connect \
 	download_all \
 	download_prebuilt \
 	download_rootfs \
+	download_tt_installer \
 	help \
 	install_all \
 	install_hosttool_pkgs \
@@ -423,6 +410,7 @@ endef
 	install_tool_pkgs \
 	install_ttkmd \
 	install_ttsmi \
+	run_tt_installer \
 	_need_dkms \
 	_need_dtb \
 	_need_dtc \
@@ -438,7 +426,6 @@ endef
 	_need_riscv64_toolchain \
 	_need_rootfs \
 	_need_ttkmd \
-	_need_ttkmd_tree \
 	_need_ttsmi \
 	_need_unxz \
 	_need_unzip \
