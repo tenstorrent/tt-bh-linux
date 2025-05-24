@@ -29,7 +29,7 @@ make build_all
 make download_rootfs
 make boot
 ```
-Log in with user: `root`, password: `root`. Quit with `Ctrl-A x`.
+Log in with user: `debian`, password: _[no password]_. Quit with `Ctrl-A x`.
 
 
 ## Blackhole Hardware
