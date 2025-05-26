@@ -259,10 +259,6 @@ download_rootfs: _need_wget _need_unxz
 		exit 0; \
 	fi; \
 	set -x ; \
-	# TODO: Test this once repo is public
-	# $(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/actions/runs/15185171296/artifacts/3176305267)
-	# unzip tt-bh-disk-image.zip
-	# mv debian-riscv64.img rootfs.ext4
 	$(call wget,$(DISK_IMAGE),https://github.com/tt-fustini/rootfs/releases/download/v0.1/riscv64.img)
 
 # Download prebuilt Linux, opensbi and dtb
