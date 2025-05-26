@@ -307,3 +307,7 @@ NOC1 coordinates of the L2CPU blocks are as follows.
 ### How do I recover a hung or misbehaving chip?
 Use `tt-smi` to perform a reset: `tt-smi -r 0` resets device 0. If this is 
 unsuccessful, a power cycle is recommended.
+
+### Help! The boot script hangs at `Writing rootfs to ...`
+This is a known issue on some systems. Give it a few minutes. This will be
+fixed in a future release.
