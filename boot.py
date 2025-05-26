@@ -76,43 +76,6 @@ def read_bin_file(file_path):
             file_bytes += b'\x00' * padding_bytes_needed
     return file_bytes
 
-def conf_l2cpu_noc_tlb_2M(chip, l2cpu_index, tlb_entry, x, y, addr):
-    strict_order = 1
-    addr = addr >> 21
-    l2cpu_noc_tlb_base = 0xFFFFF7FEFFF00000
-    (l2cpu_noc_x, l2cpu_noc_y) = {
-        0: (8, 3),
-    }[l2cpu_index]
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 16 * tlb_entry, (addr & 0xffffffff)) # l2cpu_noc_tlb.NOC_TLB_GROUP_0_ADDR_LOWER_{tlb_entry}
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 16 * tlb_entry + 4, (addr >> 32) & 0x7ff) # l2cpu_noc_tlb.NOC_TLB_GROUP_0_ADDR_UPPER_{tlb_entry}
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 16 * tlb_entry + 8, strict_order << 25 | y << 6| x << 0) # l2cpu_noc_tlb.NOC_TLB_GROUP_0_MISC_0_{tlb_entry}
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 16 * tlb_entry + 12, 0x0) # l2cpu_noc_tlb.NOC_TLB_GROUP_0_MISC_1_{tlb_entry}
-    return 0x002030000000 + 0x200000 * tlb_entry    # Address of the window in X280 address space
-
-def conf_l2cpu_noc_tlb_128G(chip, l2cpu_index, tlb_entry, x, y, addr):
-    strict_order = 1
-    addr = addr >> 37
-    l2cpu_noc_tlb_base = 0xFFFFF7FEFFF00000
-    (l2cpu_noc_x, l2cpu_noc_y) = {
-        0: (8, 3),
-    }[l2cpu_index]
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 0xE00 + 12 * tlb_entry, (addr & 0x7ffffff)) # l2cpu_noc_tlb.NOC_TLB_GROUP_1_{tlb_entry}
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 0xE00 + 12 * tlb_entry + 4, strict_order << 25 | y << 6 | x) # l2cpu_noc_tlb.NOC_TLB_GROUP_1_MISC_0_{tlb_entry}
-    chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_noc_tlb_base + 0xE00 + 12 * tlb_entry + 8, 0x0) # l2cpu_noc_tlb.NOC_TLB_GROUP_1_MISC_1_{tlb_entry}
-    return 0x400030000000 | (1 << 43) | ((1 << 37) * (1 + tlb_entry))
-
-def conf_pcie_rc_noc_tlb_data(chip):
-    (pcie_rc_noc_x, pcie_rc_noc_y) = (11, 0)
-    SII_A = 0xFFFFFFFFF0000000;
-
-    # 17 picked as arbitrary index
-    config_address = 0x134 + 0x4 * 17
-    access_address = 17 << 58
-    chip.noc_write32(0, pcie_rc_noc_x, pcie_rc_noc_y, SII_A + config_address, 0b100); # CFG0
-
-    chip.noc_write32(0, pcie_rc_noc_x, pcie_rc_noc_y, access_address + 0x0, 0x0)
-    return access_address
-
 def main():
     args = parse_args()
     l2cpus_to_boot = args.l2cpu
@@ -129,11 +92,6 @@ def main():
     for l2cpu in l2cpus_to_boot:
         (l2cpu_noc_x, l2cpu_noc_y) = l2cpu_tile_mapping[l2cpu]
         l2cpu_base = 0xfffff7fefff10000
-
-        # This config can be used if you want to map another dram tile
-        # to either add more memory or put rootfs in one of the tiles
-        # somewhere = conf_l2cpu_noc_tlb_128G(chip, args.l2cpu, 0, 0, 0, 0x0)
-        # print(f"TLB128 entry 0: 0x{somewhere:x}")
 
         opensbi_addr = int(args.opensbi_dst[l2cpu], 16)
         rootfs_addr = int(args.rootfs_dst[l2cpu], 16)
