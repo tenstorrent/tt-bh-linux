@@ -89,22 +89,22 @@ def main():
     for l2cpu in l2cpus_to_boot:
         assert (enabled_l2cpu >> l2cpu) & 1, "L2CPU {} is harvested".format(l2cpu)
         assert (enabled_gddr >> l2cpu_gddr_enable_bit_mapping[l2cpu]) & 1, "DRAM attached to L2CPU {} is harvested".format(l2cpu)
-    for l2cpu in l2cpus_to_boot:
+    for idx, l2cpu in enumerate(l2cpus_to_boot):
         (l2cpu_noc_x, l2cpu_noc_y) = l2cpu_tile_mapping[l2cpu]
         l2cpu_base = 0xfffff7fefff10000
 
-        opensbi_addr = int(args.opensbi_dst[l2cpu], 16)
-        rootfs_addr = int(args.rootfs_dst[l2cpu], 16)
+        opensbi_addr = int(args.opensbi_dst[idx], 16)
+        rootfs_addr = int(args.rootfs_dst[idx], 16)
         opensbi_bytes = read_bin_file(args.opensbi_bin)
         rootfs_bytes = read_bin_file(args.rootfs_bin)
             
         if args.kernel_dst and args.kernel_bin:
-            kernel_addr = int(args.kernel_dst[l2cpu], 16)
+            kernel_addr = int(args.kernel_dst[idx], 16)
             kernel_bytes = read_bin_file(args.kernel_bin)
         
         if args.dtb_bin and args.dtb_dst:
-            dtb_addr = int(args.dtb_dst[l2cpu], 16)
-            dtb_bytes = read_bin_file(args.dtb_bin[l2cpu])
+            dtb_addr = int(args.dtb_dst[idx], 16)
+            dtb_bytes = read_bin_file(args.dtb_bin[idx])
 
 
         # Enable the whole cache when using DRAM
