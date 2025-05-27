@@ -31,7 +31,7 @@ help:
 	@echo "Available recipes:"
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
-	@echo "    ssh			  # SSH to machine (requires a booted RISC-V)"
+	@echo "    ssh                    # SSH to machine (requires a booted RISC-V)"
 	@echo "    build_linux            # Build the kernel"
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
