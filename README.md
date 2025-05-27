@@ -20,8 +20,8 @@ Blackhole hardware and starts the X280 cores to boot them.
 Install [tt-kmd](https://github.com/tenstorrent/tt-kmd/) first, either manually
 or via [tt-installer](https://github.com/tenstorrent/tt-installer/), then:
 ```
-sudo apt install make
-git clone git@github.com:tenstorrent/tt-bh-linux
+sudo apt install make git
+git clone https://github.com/tenstorrent/tt-bh-linux
 cd tt-bh-linux
 make install_all
 make install_tt_installer
@@ -31,6 +31,11 @@ make boot
 ```
 Log in with user: `debian`, password: _[no password]_. Quit with `Ctrl-A x`.
 
+The host tool uses slirp to provide userspace networking. Port 2222 is
+forwarded to port 22 on the RISC-V. Log in using:
+```
+ssh -p 2222 debian@localhost
+```
 
 **This demo *cannot* be used concurrently with the [Tenstorrent AI stack](https://github.com/tenstorrent/tt-metal).**
 
