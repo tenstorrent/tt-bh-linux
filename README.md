@@ -32,6 +32,8 @@ make boot
 Log in with user: `debian`, password: _[no password]_. Quit with `Ctrl-A x`.
 
 
+**This demo *cannot* be used concurrently with the [Tenstorrent AI stack](https://github.com/tenstorrent/tt-metal).**
+
 ## Blackhole Hardware
 * Blackhole is a heterogeneous grid of cores linked by a Network on Chip (NOC)
 * Core types include Tensix, Ethernet, PCIe, DDR, L2CPU, and more
@@ -93,9 +95,6 @@ Blackhole also has 120 Tensix cores (not Linux capable). P100 has an addtional
 16GB of attached DRAM and P150 has an additional 20GB of attached DRAM (ie.
 28/32GB for total for P100/P150 respectfully). These additional resources aren't
 use for this demo.
-
-This demo *cannot* be used concurrently with the [Tenstorrent AI
-stack](https://github.com/tenstorrent/tt-metal).
 
 ## Dependencies
 
