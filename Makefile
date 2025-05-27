@@ -28,6 +28,22 @@ nproc := $(shell nproc)
 # SHELL_VERBOSE := set -x ;
 
 help:
+	@echo "      ______                __                             __"
+	@echo "     /_  __/__  ____  _____/ /_____  _____________  ____  / /_"
+	@echo "      / / / _ \/ __ \/ ___/ __/ __ \/ ___/ ___/ _ \/ __ \/ __/"
+	@echo "     / / /  __/ / / (__  ) /_/ /_/ / /  / /  /  __/ / / / /_"
+	@echo "    /_/  \___/_/ /_/____/\__/\____/_/  /_/   \___/_/ /_/\__/"
+	@echo "                     Blackhole Linux Demo"
+	@echo ""
+	@echo "Quick start with pre-built binaries:"
+	@echo "    install_tt_installer   # Install host kernel module and tools"
+	@echo "    download_all           # Download pre-built rootfs, firmware and kernel"
+	@echo "    install_all            # Install dependancies for compiling host tool"
+	@echo "    build_hosttool         # Build tt-bh-linux host tool"
+	@echo "    boot                   # Boot the Blackhole RISC-V CPU and connect console"
+	@echo ""
+	@echo "See README.md for more information, or use the recipies below to experiment."
+	@echo ""
 	@echo "Available recipes:"
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
