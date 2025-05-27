@@ -104,7 +104,7 @@ define _linux_set_localversion
 endef
 
 # Build the kernel
-build_linux: _need_riscv64_toolchain _need_gcc _need_linux_tree
+build_linux: _need_riscv64_toolchain _need_gcc _need_dtc _need_linux_tree
 	$(call _linux_configure,blackhole_defconfig)
 	$(call _linux_set_localversion,blackhole_defconfig)
 	$(MAKE) -C linux -j $(nproc) $(quiet_make)
