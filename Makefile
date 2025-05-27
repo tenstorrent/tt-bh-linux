@@ -30,7 +30,6 @@ nproc := $(shell nproc)
 help:
 	@echo "Available recipes:"
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
-	@echo "    ttsmi                  # Run tt-smi"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
 	@echo "    ssh			  # SSH to machine (requires a booted RISC-V)"
 	@echo "    build_linux            # Build the kernel"
@@ -50,8 +49,7 @@ help:
 	@echo "    install_qemu           # Install riscv qemu and dependencies"
 	@echo "    install_tool_pkgs      # Install tools"
 	@echo "    install_hosttool_pkgs  # Install libraries for compiling"
-	@echo "    install_ttsmi          # Install tt-smi"
-	@echo "    install_ttkmd          # Install tt-kmd"
+	@echo "    install_tt_installer   # Install (run) tt-installer for tt-kmd, tt-smi and luwen"
 	@echo "    clone_linux            # Clone the Tenstorrent Linux kernel source tree"
 	@echo "    clone_opensbi          # Clone the Tenstorrent opensbi source tree"
 	@echo "    clone_all              # Clone linux and opensbi trees"
@@ -66,10 +64,6 @@ help:
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen
 	$(PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
-
-# Run tt-smi
-ttsmi: _need_ttsmi
-	tt-smi
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool
@@ -212,13 +206,7 @@ install_tool_pkgs:
 install_hosttool_pkgs:
 	$(call install,libvdeslirp-dev libslirp-dev)
 
-# Install tt-smi
-install_ttsmi: run_tt_installer
-
-# Install tt-kmd
-install_ttkmd: run_tt_installer
-
-run_tt_installer: download_tt_installer
+install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
 
 #################################
@@ -302,9 +290,6 @@ _need_linux_tree:
 _need_opensbi_tree:
 	$(call _need_file,opensbi,clon,clone_opensbi)
 
-_need_dkms:
-	$(call _need_prog,dkms,install,install_dkms)
-
 _need_dtc:
 	$(call _need_prog,dtc,install,install_tool_pkgs)
 
@@ -315,16 +300,13 @@ _need_git:
 	$(call _need_prog,git,install,install_kernel_pkgs)
 
 _need_luwen:
-	$(call _need_pylib,pyluwen,install,install_ttsmi)
+	$(call _need_pylib,pyluwen,install,install_tt_installer)
 
 _need_python:
 	$(call _need_prog,python3,install,install_tool_pkgs)
 
 _need_riscv64_toolchain:
 	$(call _need_prog,riscv64-linux-gnu-gcc,install,install_toolchain_pkgs)
-
-_need_ttsmi:
-	$(call _need_prog,tt-smi,install,install_ttsmi)
 
 _need_unxz:
 	$(call _need_prog,unxz,install,install_tool_pkgs)
@@ -340,6 +322,9 @@ _need_e2tools:
 
 _need_ssh_key:
 	$(call _need_file,user,build_ssh_key)
+
+_need_tt_installer:
+	$(call _need_file,tt-installer-v1.1.0.sh,download_tt_installer)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
@@ -408,10 +393,7 @@ endef
 	install_qemu \
 	install_toolchain_pkgs \
 	install_tool_pkgs \
-	install_ttkmd \
-	install_ttsmi \
-	run_tt_installer \
-	_need_dkms \
+	install_tt_installer \
 	_need_dtb \
 	_need_dtc \
 	_need_gcc \
@@ -421,12 +403,10 @@ endef
 	_need_luwen \
 	_need_opensbi \
 	_need_opensbi_tree \
-	_need_pipx \
 	_need_python \
 	_need_riscv64_toolchain \
 	_need_rootfs \
-	_need_ttkmd \
-	_need_ttsmi \
+	_need_tt_installer \
 	_need_unxz \
 	_need_unzip \
 	ttsmi
