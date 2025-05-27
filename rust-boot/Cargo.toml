@@ -1,0 +1,15 @@
+[package]
+name = "rust-boot"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# FIXME use a tag once there is a working one
+luwen-ref = { git = "https://github.com/tenstorrent/luwen.git", rev = "3d3e0a5f070b7abd932c7e4b34ee0d771f306f73" }
+luwen-core = { git = "https://github.com/tenstorrent/luwen.git", rev = "3d3e0a5f070b7abd932c7e4b34ee0d771f306f73" }
+luwen-if = { git = "https://github.com/tenstorrent/luwen.git", rev = "3d3e0a5f070b7abd932c7e4b34ee0d771f306f73" }
+anyhow = "1.0.98"
+clap = { version = "4.5.38", features = ["derive"] }
+clap-num = "1.2.0"
