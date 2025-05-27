@@ -45,10 +45,8 @@ help:
 	@echo "    clean_downloads        # Remove all downloaded files"
 	@echo "    install_all            # Install all packages"
 	@echo "    install_kernel_pkgs    # Install packages needed to build the kernel"
-	@echo "    install_toolchain_pkgs # Install packages for cross compiling to riscv64"
 	@echo "    install_qemu           # Install riscv qemu and dependencies"
-	@echo "    install_tool_pkgs      # Install tools"
-	@echo "    install_hosttool_pkgs  # Install libraries for compiling"
+	@echo "    install_hosttool_pkgs  # Install dependancies for compiling host tool"
 	@echo "    install_tt_installer   # Install (run) tt-installer for tt-kmd, tt-smi and luwen"
 	@echo "    clone_linux            # Clone the Tenstorrent Linux kernel source tree"
 	@echo "    clone_opensbi          # Clone the Tenstorrent opensbi source tree"
@@ -173,7 +171,7 @@ clean_downloads:
 # Recipes that install packages
 
 # Install all packages
-install_all: apt_update install_kernel_pkgs install_toolchain_pkgs install_tool_pkgs install_hosttool_pkgs
+install_all: apt_update install_kernel_pkgs install_hosttool_pkgs
 	@echo "Install complete! Now run 'make build_all' to build Linux, OpenSBI and the host tool"
 
 sudo := sudo
@@ -186,25 +184,18 @@ endef
 apt_update:
 	$(sudo) DEBIAN_FRONTEND=noninteractive apt-get update -qq
 
-# Install packages needed to build the kernel
+# Install packages needed to build the kernel and opensbi for riscv64. These
+# are not required if using prebuilt images.
 install_kernel_pkgs:
-	$(call install,build-essential libncurses-dev gawk flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf git make bc)
-
-# Install packages for cross compiling to riscv64
-install_toolchain_pkgs:
-	$(call install,gcc-riscv64-linux-gnu binutils-multiarch ccache)
+	$(call install,build-essential libncurses-dev gawk flex bison openssl libssl-dev libelf-dev libudev-dev libpci-dev libiberty-dev autoconf git make bc gcc-riscv64-linux-gnu binutils-multiarch ccache device-tree-compiler)
 
 # Install riscv qemu and dependencies
 install_qemu:
 	$(call install,qemu-system-misc qemu-utils qemu-system-common qemu-system-data qemu-efi-riscv64)
 
-# Install tools
-install_tool_pkgs:
-	$(call install,device-tree-compiler xz-utils unzip python3 cargo rustc dkms e2tools)
-
-# Install libraries for compiling
+# Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev)
+	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -391,7 +382,6 @@ endef
 	install_hosttool_pkgs \
 	install_kernel_pkgs \
 	install_qemu \
-	install_toolchain_pkgs \
 	install_tool_pkgs \
 	install_tt_installer \
 	_need_dtb \
