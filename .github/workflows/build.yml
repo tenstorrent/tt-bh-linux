@@ -24,15 +24,8 @@ jobs:
     - name: Clone Linux and OpenSBI
       run: make clone_all
 
-    - name: Load ccache
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/ccache
-        key: tt
-
     - name: Build Linux, OpenSBI and device tree
       run: |
-        export PATH="/usr/lib/ccache:$PATH"
         make build_all
 
     - name: Archive artifacts
@@ -43,10 +36,6 @@ jobs:
           Image
           fw_jump.bin
           blackhole-p100.dtb
-
-    - name: Print stats
-      run: |
-        ccache -s
 
   upload_release_artifacts:
     if: startsWith(github.ref, 'refs/tags/v')
