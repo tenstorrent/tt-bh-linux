@@ -164,7 +164,7 @@ clean: clean_builds
 
 # Remove all downloaded files
 clean_downloads:
-	rm -f $(DISK_IMAGE)
+	rm -f $(DISK_IMAGE) tt-bh-disk-image.zip tt-bh-linux.zip tt-installer-v1.1.0.sh
 
 #################################
 # Recipes that install packages
