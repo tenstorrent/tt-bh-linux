@@ -59,12 +59,12 @@ help:
 # Recipes that run things
 
 # Boot the Blackhole RISC-V CPU
-boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen
+boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
 	$(PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
 
 # Connect to console (requires a booted RISC-V)
-connect: _need_hosttool
+connect: _need_hosttool _need_ttkmd
 	./console/tt-bh-linux
 
 # Connect over SSH (requires a booted RISC-V)
