@@ -117,8 +117,7 @@ build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
 	ln -f opensbi/build/platform/generic/firmware/fw_jump.bin fw_jump.bin
 
 # Build tt-bh-linux
-# FIXME needs <slirp/libvdeslirp.h>
-build_hosttool: _need_gcc
+build_hosttool: _need_gcc _need_libvdevslirp
 	$(MAKE) -C console -j $(nproc) $(quiet_make)
 
 # Generate a SSH key and add it to the image
@@ -317,6 +316,9 @@ _need_ssh_key:
 _need_tt_installer:
 	$(call _need_file,tt-installer-v1.1.0.sh,download_tt_installer)
 
+_need_libvdevslirp:
+	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install_hosttool_pkgs)
+
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
 define _need_file =
@@ -399,4 +401,4 @@ endef
 	_need_tt_installer \
 	_need_unxz \
 	_need_unzip \
-	ttsmi
+	_need_libvdevslirp
