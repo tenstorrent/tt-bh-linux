@@ -28,11 +28,26 @@ nproc := $(shell nproc)
 # SHELL_VERBOSE := set -x ;
 
 help:
+	@echo "      ______                __                             __"
+	@echo "     /_  __/__  ____  _____/ /_____  _____________  ____  / /_"
+	@echo "      / / / _ \/ __ \/ ___/ __/ __ \/ ___/ ___/ _ \/ __ \/ __/"
+	@echo "     / / /  __/ / / (__  ) /_/ /_/ / /  / /  /  __/ / / / /_"
+	@echo "    /_/  \___/_/ /_/____/\__/\____/_/  /_/   \___/_/ /_/\__/"
+	@echo "                     Blackhole Linux Demo"
+	@echo ""
+	@echo "Quick start with pre-built binaries:"
+	@echo "    install_tt_installer   # Install host kernel module and tools"
+	@echo "    download_all           # Download pre-built rootfs, firmware and kernel"
+	@echo "    install_all            # Install dependancies for compiling host tool"
+	@echo "    build_hosttool         # Build tt-bh-linux host tool"
+	@echo "    boot                   # Boot the Blackhole RISC-V CPU and connect console"
+	@echo ""
+	@echo "See README.md for more information, or use the recipies below to experiment."
+	@echo ""
 	@echo "Available recipes:"
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
-	@echo "    ttsmi                  # Run tt-smi"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
-	@echo "    ssh			  # SSH to machine (requires a booted RISC-V)"
+	@echo "    ssh                    # SSH to machine (requires a booted RISC-V)"
 	@echo "    build_linux            # Build the kernel"
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
@@ -46,12 +61,9 @@ help:
 	@echo "    clean_downloads        # Remove all downloaded files"
 	@echo "    install_all            # Install all packages"
 	@echo "    install_kernel_pkgs    # Install packages needed to build the kernel"
-	@echo "    install_toolchain_pkgs # Install packages for cross compiling to riscv64"
 	@echo "    install_qemu           # Install riscv qemu and dependencies"
-	@echo "    install_tool_pkgs      # Install tools"
-	@echo "    install_hosttool_pkgs  # Install libraries for compiling"
-	@echo "    install_ttsmi          # Install tt-smi"
-	@echo "    install_ttkmd          # Install tt-kmd"
+	@echo "    install_hosttool_pkgs  # Install dependancies for compiling host tool"
+	@echo "    install_tt_installer   # Install (run) tt-installer for tt-kmd, tt-smi and luwen"
 	@echo "    clone_linux            # Clone the Tenstorrent Linux kernel source tree"
 	@echo "    clone_opensbi          # Clone the Tenstorrent opensbi source tree"
 	@echo "    clone_all              # Clone linux and opensbi trees"
@@ -63,16 +75,12 @@ help:
 # Recipes that run things
 
 # Boot the Blackhole RISC-V CPU
-boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen
+boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
 	$(PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
 
-# Run tt-smi
-ttsmi: _need_ttsmi
-	tt-smi
-
 # Connect to console (requires a booted RISC-V)
-connect: _need_hosttool
+connect: _need_hosttool _need_ttkmd
 	./console/tt-bh-linux
 
 # Connect over SSH (requires a booted RISC-V)
@@ -112,7 +120,7 @@ define _linux_set_localversion
 endef
 
 # Build the kernel
-build_linux: _need_riscv64_toolchain _need_gcc _need_linux_tree
+build_linux: _need_riscv64_toolchain _need_gcc _need_dtc _need_linux_tree
 	$(call _linux_configure,blackhole_defconfig)
 	$(call _linux_set_localversion,blackhole_defconfig)
 	$(MAKE) -C linux -j $(nproc) $(quiet_make)
@@ -125,8 +133,7 @@ build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
 	ln -f opensbi/build/platform/generic/firmware/fw_jump.bin fw_jump.bin
 
 # Build tt-bh-linux
-# FIXME needs <slirp/libvdeslirp.h>
-build_hosttool: _need_gcc
+build_hosttool: _need_gcc _need_libvdevslirp
 	$(MAKE) -C console -j $(nproc) $(quiet_make)
 
 # Generate a SSH key and add it to the image
@@ -173,13 +180,13 @@ clean: clean_builds
 
 # Remove all downloaded files
 clean_downloads:
-	rm -f $(DISK_IMAGE)
+	rm -f $(DISK_IMAGE) tt-bh-disk-image.zip tt-bh-linux.zip tt-installer-v1.1.0.sh
 
 #################################
 # Recipes that install packages
 
 # Install all packages
-install_all: apt_update install_kernel_pkgs install_toolchain_pkgs install_tool_pkgs install_hosttool_pkgs
+install_all: apt_update install_kernel_pkgs install_hosttool_pkgs
 	@echo "Install complete! Now run 'make build_all' to build Linux, OpenSBI and the host tool"
 
 sudo := sudo
@@ -192,33 +199,20 @@ endef
 apt_update:
 	$(sudo) DEBIAN_FRONTEND=noninteractive apt-get update -qq
 
-# Install packages needed to build the kernel
+# Install packages needed to build the kernel and opensbi for riscv64. These
+# are not required if using prebuilt images.
 install_kernel_pkgs:
-	$(call install,build-essential libncurses-dev gawk flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf git make bc)
-
-# Install packages for cross compiling to riscv64
-install_toolchain_pkgs:
-	$(call install,gcc-riscv64-linux-gnu binutils-multiarch ccache)
+	$(call install,build-essential libncurses-dev gawk flex bison openssl libssl-dev libelf-dev libudev-dev libpci-dev libiberty-dev autoconf git make bc gcc-riscv64-linux-gnu binutils-multiarch ccache device-tree-compiler)
 
 # Install riscv qemu and dependencies
 install_qemu:
 	$(call install,qemu-system-misc qemu-utils qemu-system-common qemu-system-data qemu-efi-riscv64)
 
-# Install tools
-install_tool_pkgs:
-	$(call install,device-tree-compiler xz-utils unzip python3 cargo rustc dkms e2tools)
-
-# Install libraries for compiling
+# Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev)
+	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools)
 
-# Install tt-smi
-install_ttsmi: run_tt_installer
-
-# Install tt-kmd
-install_ttkmd: run_tt_installer
-
-run_tt_installer: download_tt_installer
+install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
 
 #################################
@@ -302,9 +296,6 @@ _need_linux_tree:
 _need_opensbi_tree:
 	$(call _need_file,opensbi,clon,clone_opensbi)
 
-_need_dkms:
-	$(call _need_prog,dkms,install,install_dkms)
-
 _need_dtc:
 	$(call _need_prog,dtc,install,install_tool_pkgs)
 
@@ -315,16 +306,13 @@ _need_git:
 	$(call _need_prog,git,install,install_kernel_pkgs)
 
 _need_luwen:
-	$(call _need_pylib,pyluwen,install,install_ttsmi)
+	$(call _need_pylib,pyluwen,install,install_tt_installer)
 
 _need_python:
 	$(call _need_prog,python3,install,install_tool_pkgs)
 
 _need_riscv64_toolchain:
 	$(call _need_prog,riscv64-linux-gnu-gcc,install,install_toolchain_pkgs)
-
-_need_ttsmi:
-	$(call _need_prog,tt-smi,install,install_ttsmi)
 
 _need_unxz:
 	$(call _need_prog,unxz,install,install_tool_pkgs)
@@ -340,6 +328,12 @@ _need_e2tools:
 
 _need_ssh_key:
 	$(call _need_file,user,build_ssh_key)
+
+_need_tt_installer:
+	$(call _need_file,tt-installer-v1.1.0.sh,download_tt_installer)
+
+_need_libvdevslirp:
+	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install_hosttool_pkgs)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
@@ -406,12 +400,8 @@ endef
 	install_hosttool_pkgs \
 	install_kernel_pkgs \
 	install_qemu \
-	install_toolchain_pkgs \
 	install_tool_pkgs \
-	install_ttkmd \
-	install_ttsmi \
-	run_tt_installer \
-	_need_dkms \
+	install_tt_installer \
 	_need_dtb \
 	_need_dtc \
 	_need_gcc \
@@ -421,12 +411,10 @@ endef
 	_need_luwen \
 	_need_opensbi \
 	_need_opensbi_tree \
-	_need_pipx \
 	_need_python \
 	_need_riscv64_toolchain \
 	_need_rootfs \
-	_need_ttkmd \
-	_need_ttsmi \
+	_need_tt_installer \
 	_need_unxz \
 	_need_unzip \
-	ttsmi
+	_need_libvdevslirp
