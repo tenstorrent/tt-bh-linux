@@ -84,8 +84,8 @@ connect: _need_hosttool _need_ttkmd
 	./console/tt-bh-linux
 
 # Connect over SSH (requires a booted RISC-V)
-ssh: _need_ssh_key
-	ssh -F /dev/null -i user -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
+ssh:
+	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
 #################################
 # Recipes that build things

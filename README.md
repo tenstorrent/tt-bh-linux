@@ -34,7 +34,7 @@ Log in with user: `debian`, password: _[no password]_. Quit with `Ctrl-A x`.
 The host tool uses slirp to provide userspace networking. Port 2222 is
 forwarded to port 22 on the RISC-V. Log in using:
 ```
-ssh -p 2222 debian@localhost
+make ssh
 ```
 
 **This demo *cannot* be used concurrently with the [Tenstorrent AI stack](https://github.com/tenstorrent/tt-metal).**
