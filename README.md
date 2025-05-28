@@ -264,8 +264,7 @@ Rust that provides an interface for accessing Tenstorrent accelerator devices.
 Luwen provides Python bindings (`pyluwen`), used by boot.py.
 
 ### Can the X280 access other cores, e.g. a Tensix or memory on the Linux host?
-Yes. Please file an issue if you wish to do this and example code will be
-provided.
+Yes, see [here](docs/addressing.md)
 
 ### Why is `tt-bh-linux`'s console output corrupted?
 You probably have multiple instances of it running against one L2CPU.
