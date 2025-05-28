@@ -67,7 +67,7 @@ help:
 	@echo "    clone_linux            # Clone the Tenstorrent Linux kernel source tree"
 	@echo "    clone_opensbi          # Clone the Tenstorrent opensbi source tree"
 	@echo "    clone_all              # Clone linux and opensbi trees"
-	@echo "    download_rootfs        # Download Ubuntu server 25.04 pre-installed rootfs"
+	@echo "    download_rootfs        # Download Debian Trixie riscv64 rootfs"
 	@echo "    download_prebuilt      # Download prebuilt Linux, opensbi and dtb"
 	@echo "    download_all           # Download all preqrequisites"
 
@@ -244,7 +244,7 @@ define wget
     mv -f $(1).tmp $(1)
 endef
 
-# Download Ubuntu server 25.04 pre-installed rootfs
+# Download Debian Trixie riscv64 rootfs
 download_rootfs: _need_wget _need_unxz
 	@$(SHELL_VERBOSE) \
 	set -eo pipefail; \
