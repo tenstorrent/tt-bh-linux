@@ -45,6 +45,8 @@ class PLLCNTL1(ctypes.LittleEndianStructure):
 
 
 def set_l2cpu_pll(chip, mhz):
+    print("Setting clock to ", mhz)
+
     sol_fbdiv = solutions[mhz][0]
     sol_postdivs = solutions[mhz][1]
 
@@ -69,8 +71,6 @@ def set_l2cpu_pll(chip, mhz):
 
 def main(l2_cpu, mhz):
     chip = PciChip(0)
-    print("Setting clock to ", mhz)
-    
     set_l2cpu_pll(chip, mhz)
     
 if __name__ == "__main__":
