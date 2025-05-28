@@ -16,12 +16,14 @@ This demo downloads OpenSBI, Linux and userspace images, configures them on the
 Blackhole hardware and starts the X280 cores to boot them.
 
 ## Recipe for the Impatient
-#### Quick-start to boot Linux to a console, assumes a Debian-based Linux host
-Install [tt-kmd](https://github.com/tenstorrent/tt-kmd/) first, either manually
-or via [tt-installer](https://github.com/tenstorrent/tt-installer/), then:
+
+#### Quick-start to boot Linux to a console
+
+The tooling assumes an Ubuntu or Debian-based Linux host.
+
 ```
-sudo apt install make
-git clone git@github.com:tenstorrent/tt-bh-linux
+sudo apt install make git
+git clone https://github.com/tenstorrent/tt-bh-linux
 cd tt-bh-linux
 make install_all
 make install_tt_installer
@@ -30,6 +32,11 @@ make boot
 ```
 Log in with user: `debian`, password: _[no password]_. Quit with `Ctrl-A x`.
 
+The host tool uses slirp to provide userspace networking. Port 2222 is
+forwarded to port 22 on the RISC-V. Log in using:
+```
+make ssh
+```
 
 **This demo *cannot* be used concurrently with the [Tenstorrent AI stack](https://github.com/tenstorrent/tt-metal).**
 
@@ -105,8 +112,8 @@ Interface (TT-SMI) tool to interact with the Blackhole PCIe device:
  * [tt-kmd](https://github.com/tenstorrent/tt-kmd/), a Linux kernel module that
    provides an interface for userspace such as luwen
 
-The Makefile can be used to set up tt-smi and tt-kmd automatically.
-
+The recommmended way to install these dependancies is with
+[tt-installer](https://github.com/tenstorrent/tt-installer/).
 
 ### Manual installation
 
@@ -132,7 +139,7 @@ specific dependencies.
 [More information is available here](INFO.md)
 
 ### Initial Setup
-This is automated by `make build_all` and `make install_ttsmi`.
+This is automated by `make build_all` and `make install_tt_installer`.
 * Install packages from your Linux distribution:
   * Packages for cross-compiling Linux/OpenSBI for RISC-V
   * Packages for establishing a Python virtual environment for `pyluwen`

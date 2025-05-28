@@ -84,8 +84,8 @@ connect: _need_hosttool _need_ttkmd
 	./console/tt-bh-linux
 
 # Connect over SSH (requires a booted RISC-V)
-ssh: _need_ssh_key
-	ssh -F /dev/null -i user -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
+ssh:
+	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
 #################################
 # Recipes that build things
@@ -332,7 +332,7 @@ _need_ssh_key:
 	$(call _need_file,user,build_ssh_key)
 
 _need_tt_installer:
-	$(call _need_file,tt-installer-v1.1.0.sh,download_tt_installer)
+	$(call _need_file,tt-installer-v1.1.0.sh,download,download_tt_installer)
 
 _need_libvdevslirp:
 	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install_hosttool_pkgs)
