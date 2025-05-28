@@ -25,8 +25,7 @@ git clone git@github.com:tenstorrent/tt-bh-linux
 cd tt-bh-linux
 make install_all
 make install_tt_installer
-make build_all
-make download_rootfs
+make download_all
 make boot
 ```
 Log in with user: `debian`, password: _[no password]_. Quit with `Ctrl-A x`.
