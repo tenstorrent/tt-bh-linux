@@ -139,7 +139,12 @@ inline int uart_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag) {
     }
 
     uint64_t uart_base = desc->virtuart_base;
-    printf("%lx", uart_base);
+    if (uart_base == ~0ULL) {
+        printf("L2CPU[%d, %d] failed to find the virtual UART; exiting\n", tile.x, tile.y);
+        return 1;
+    } else {
+        printf("L2CPU[%d, %d] found the virtual UART at 0x%lx\n", tile.x, tile.y, uart_base);
+    }
 
     debug_descriptor_window.reset();
 
