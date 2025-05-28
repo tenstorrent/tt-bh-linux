@@ -85,6 +85,12 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_pyth
 boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
 	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
 
+rust_boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_luwen _need_ttkmd
+	(cd rust-boot; cargo build --release)
+	$(HOME)/.tenstorrent-venv/bin/tt-smi -r0
+	./rust-boot/target/release/rust-boot --boot --l2cpu $(L2CPU) --opensbi-bin fw_jump.bin --opensbi-dst 0x400030000000 --rootfs-bin $(DISK_IMAGE) --rootfs-dst 0x4000e5000000 --kernel-bin Image --kernel-dst 0x400030200000 --dtb-bin blackhole-p100.dtb --dtb-dst 0x400030100000
+	./console/tt-bh-linux --l2cpu $(L2CPU)
+
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
 	./console/tt-bh-linux --l2cpu $(L2CPU)
@@ -462,4 +468,5 @@ endef
 	_need_tmux \
 	_need_unxz \
 	_need_unzip \
-	_need_libvdevslirp
+	_need_libvdevslirp \
+	rust_boot
