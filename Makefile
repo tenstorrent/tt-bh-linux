@@ -255,6 +255,7 @@ download_rootfs: _need_wget _need_unxz
 	set -x ; \
 	$(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.2/tt-bh-disk-image.zip)
 	unzip tt-bh-disk-image.zip
+	rm tt-bh-disk-image.zip
 	mv debian-riscv64.img rootfs.ext4
 
 # Download prebuilt Linux, opensbi and dtb
