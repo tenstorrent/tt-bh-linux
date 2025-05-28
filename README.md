@@ -24,7 +24,7 @@ sudo apt install make
 git clone git@github.com:tenstorrent/tt-bh-linux
 cd tt-bh-linux
 make install_all
-make install_ttsmi
+make install_tt_installer
 make download_all
 make boot
 ```
