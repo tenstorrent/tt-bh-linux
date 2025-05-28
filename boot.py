@@ -87,8 +87,8 @@ def main():
     enabled_l2cpu = telemetry.enabled_l2cpu
     enabled_gddr = telemetry.enabled_gddr
     for l2cpu in l2cpus_to_boot:
-        assert (enabled_l2cpu >> l2cpu) & 1, "L2CPU {} is harvested".format(l2cpu)
-        assert (enabled_gddr >> l2cpu_gddr_enable_bit_mapping[l2cpu]) & 1, "DRAM attached to L2CPU {} is harvested".format(l2cpu)
+        assert (enabled_l2cpu >> l2cpu) & 1, "L2CPU {} is harvested, try booting L2CPU {} with make L2CPU={} boot".format(l2cpu, l2cpu ^ 0b1, l2cpu ^ 0b1)
+        assert (enabled_gddr >> l2cpu_gddr_enable_bit_mapping[l2cpu]) & 1, "DRAM attached to L2CPU {} is harvested, try booting L2CPU {} with make L2CPU={} boot".format(l2cpu, l2cpu ^ 0b1, l2cpu ^0b1)
     for idx, l2cpu in enumerate(l2cpus_to_boot):
         (l2cpu_noc_x, l2cpu_noc_y) = l2cpu_tile_mapping[l2cpu]
         l2cpu_base = 0xfffff7fefff10000
