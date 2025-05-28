@@ -39,7 +39,6 @@ help:
 	@echo "    install_tt_installer   # Install host kernel module and tools"
 	@echo "    download_all           # Download pre-built rootfs, firmware and kernel"
 	@echo "    install_all            # Install dependancies for compiling host tool"
-	@echo "    build_hosttool         # Build tt-bh-linux host tool"
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU and connect console"
 	@echo ""
 	@echo "See README.md for more information, or use the recipies below to experiment."
