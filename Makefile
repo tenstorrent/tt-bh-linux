@@ -67,6 +67,12 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_pyth
 	$(PYTHON) boot.py --boot --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux
 
+rust_boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_luwen
+	(cd rust-boot; cargo build --release)
+	$(HOME)/.tenstorrent-venv/bin/tt-smi -r0
+	./rust-boot/target/release/rust-boot --boot --opensbi-bin fw_jump.bin --opensbi-dst 0x400030000000 --rootfs-bin $(DISK_IMAGE) --rootfs-dst 0x4000e5000000 --kernel-bin Image --kernel-dst 0x400030200000 --dtb-bin blackhole-p100.dtb --dtb-dst 0x400030100000
+	./console/tt-bh-linux
+
 # Run tt-smi
 ttsmi: _need_ttsmi
 	tt-smi
@@ -429,4 +435,5 @@ endef
 	_need_ttsmi \
 	_need_unxz \
 	_need_unzip \
+	rust_boot \
 	ttsmi
