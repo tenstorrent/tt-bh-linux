@@ -68,13 +68,3 @@ def set_l2cpu_pll(chip, mhz):
 
     for postdiv_index, target in decreasing_postdivs:
         initial_post_dividers.step(chip, target, postdiv_index)
-
-def main(l2_cpu, mhz):
-    chip = PciChip(0)
-    set_l2cpu_pll(chip, mhz)
-    
-if __name__ == "__main__":
-    # l2_cpu actually seems unused. Maybe remove?
-    l2_cpu = int(sys.argv[1])
-    mhz = int(sys.argv[2])
-    main(l2_cpu, mhz)
