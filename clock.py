@@ -70,28 +70,8 @@ def set_l2cpu_pll(chip, mhz):
 def main(l2_cpu, mhz):
     chip = PciChip(0)
     print("Setting clock to ", mhz)
-
-    initial_post_dividers = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_5, initial_post_dividers)
-    initial_post_dividers = PLLCNTL5.from_buffer(initial_post_dividers)
-    # print(list(initial_post_dividers.postdiv))
-
-    initial_fbdiv = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_1, initial_fbdiv)
-    initial_fbdiv = PLLCNTL1.from_buffer(initial_fbdiv)
-    # print(initial_fbdiv.fbdiv)
     
     set_l2cpu_pll(chip, mhz)
-
-    initial_post_dividers = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_5, initial_post_dividers)
-    initial_post_dividers = PLLCNTL5.from_buffer(initial_post_dividers)
-    # print(list(initial_post_dividers.postdiv))
-
-    initial_fbdiv = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_1, initial_fbdiv)
-    initial_fbdiv = PLLCNTL1.from_buffer(initial_fbdiv)
-    # print(initial_fbdiv.fbdiv)
     
 if __name__ == "__main__":
     # l2_cpu actually seems unused. Maybe remove?
