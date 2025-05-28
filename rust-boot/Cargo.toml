@@ -6,10 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# FIXME This is luwen v0.6.5 and pyluwen-0.7.3, but there is no such version on crates.io
-luwen-ref = { git = "https://github.com/tenstorrent/luwen.git", rev = "20921764b32e919be628c9b20f4e362db3b8429c" }
-luwen-core = { git = "https://github.com/tenstorrent/luwen.git", rev = "20921764b32e919be628c9b20f4e362db3b8429c" }
-luwen-if = { git = "https://github.com/tenstorrent/luwen.git", rev = "20921764b32e919be628c9b20f4e362db3b8429c" }
+luwen-ref = { git = "https://github.com/tenstorrent/luwen.git", tag = "v0.6.5" }
+luwen-core = { git = "https://github.com/tenstorrent/luwen.git", tag = "v0.6.5" }
+luwen-if = { git = "https://github.com/tenstorrent/luwen.git", tag = "v0.6.5" }
 anyhow = "1.0.98"
 clap = { version = "4.5.38", features = ["derive"] }
 clap-num = "1.2.0"
