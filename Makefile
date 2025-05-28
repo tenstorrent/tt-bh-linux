@@ -332,7 +332,7 @@ _need_ssh_key:
 	$(call _need_file,user,build_ssh_key)
 
 _need_tt_installer:
-	$(call _need_file,tt-installer-v1.1.0.sh,download_tt_installer)
+	$(call _need_file,tt-installer-v1.1.0.sh,download,download_tt_installer)
 
 _need_libvdevslirp:
 	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install_hosttool_pkgs)
