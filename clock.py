@@ -45,6 +45,8 @@ class PLLCNTL1(ctypes.LittleEndianStructure):
 
 
 def set_l2cpu_pll(chip, mhz):
+    print("Setting clock to ", mhz)
+
     sol_fbdiv = solutions[mhz][0]
     sol_postdivs = solutions[mhz][1]
 
@@ -66,35 +68,3 @@ def set_l2cpu_pll(chip, mhz):
 
     for postdiv_index, target in decreasing_postdivs:
         initial_post_dividers.step(chip, target, postdiv_index)
-
-def main(l2_cpu, mhz):
-    chip = PciChip(0)
-    print("Setting clock to ", mhz)
-
-    initial_post_dividers = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_5, initial_post_dividers)
-    initial_post_dividers = PLLCNTL5.from_buffer(initial_post_dividers)
-    # print(list(initial_post_dividers.postdiv))
-
-    initial_fbdiv = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_1, initial_fbdiv)
-    initial_fbdiv = PLLCNTL1.from_buffer(initial_fbdiv)
-    # print(initial_fbdiv.fbdiv)
-    
-    set_l2cpu_pll(chip, mhz)
-
-    initial_post_dividers = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_5, initial_post_dividers)
-    initial_post_dividers = PLLCNTL5.from_buffer(initial_post_dividers)
-    # print(list(initial_post_dividers.postdiv))
-
-    initial_fbdiv = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_1, initial_fbdiv)
-    initial_fbdiv = PLLCNTL1.from_buffer(initial_fbdiv)
-    # print(initial_fbdiv.fbdiv)
-    
-if __name__ == "__main__":
-    # l2_cpu actually seems unused. Maybe remove?
-    l2_cpu = int(sys.argv[1])
-    mhz = int(sys.argv[2])
-    main(l2_cpu, mhz)
