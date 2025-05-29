@@ -5,7 +5,11 @@ import os
 import sys
 import time
 import ctypes
-from pyluwen import PciChip
+from kmdif import TenstorrentDevice
+
+ARC_X = 8
+ARC_Y = 0
+NOC_0 = 0
 
 PLL4_BASE = 0x80020500 # PLL4 is for L2CPU
 PLL_CNTL_1 = 0x4
@@ -26,7 +30,7 @@ class PLLCNTL5(ctypes.LittleEndianStructure):
         one_step = max(min(target - self.postdiv[field], 1), -1)
         while self.postdiv[field] != target:
             self.postdiv[field] += one_step
-            chip.axi_write(PLL4_BASE+PLL_CNTL_5, bytearray(self))
+            chip.noc_write(NOC_0, ARC_X, ARC_Y, PLL4_BASE+PLL_CNTL_5, bytearray(self))
             time.sleep(1e-9)
 
 class PLLCNTL1(ctypes.LittleEndianStructure):
@@ -40,7 +44,7 @@ class PLLCNTL1(ctypes.LittleEndianStructure):
         one_step = max(min(target - self.fbdiv, 1), -1)
         while self.fbdiv != target:
             self.fbdiv += one_step
-            chip.axi_write(PLL4_BASE+PLL_CNTL_1, bytearray(self))
+            chip.noc_write(NOC_0, ARC_X, ARC_Y, PLL4_BASE+PLL_CNTL_1, bytearray(self))
             time.sleep(1e-9)
 
 
@@ -48,12 +52,10 @@ def set_l2cpu_pll(chip, mhz):
     sol_fbdiv = solutions[mhz][0]
     sol_postdivs = solutions[mhz][1]
 
-    initial_post_dividers = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_5, initial_post_dividers)
+    initial_post_dividers = chip.noc_read(NOC_0, ARC_X, ARC_Y, PLL4_BASE+PLL_CNTL_5, 4);
     initial_post_dividers = PLLCNTL5.from_buffer(initial_post_dividers)
 
-    initial_fbdiv = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_1, initial_fbdiv)
+    initial_fbdiv = chip.noc_read(NOC_0, ARC_X, ARC_Y, PLL4_BASE+PLL_CNTL_1, 4);
     initial_fbdiv = PLLCNTL1.from_buffer(initial_fbdiv)
 
     increasing_postdivs = [ (postdiv_index, target) for postdiv_index, target in enumerate(sol_postdivs) if target > initial_post_dividers.postdiv[postdiv_index] ]
@@ -67,31 +69,26 @@ def set_l2cpu_pll(chip, mhz):
     for postdiv_index, target in decreasing_postdivs:
         initial_post_dividers.step(chip, target, postdiv_index)
 
-def main(l2_cpu, mhz):
-    chip = PciChip(0)
+def main(mhz):
+    chip = TenstorrentDevice("/dev/tenstorrent/0")
+    chip.open()
     print("Setting clock to ", mhz)
 
     initial_post_dividers = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_5, initial_post_dividers)
-    initial_post_dividers = PLLCNTL5.from_buffer(initial_post_dividers)
-    # print(list(initial_post_dividers.postdiv))
+    initial_post_dividers = chip.noc_read(NOC_0, ARC_X, ARC_Y, PLL4_BASE+PLL_CNTL_5, 4);
 
-    initial_fbdiv = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_1, initial_fbdiv)
+    initial_post_dividers = PLLCNTL5.from_buffer(initial_post_dividers)
+
+    initial_fbdiv = chip.noc_read(NOC_0, ARC_X, ARC_Y, PLL4_BASE+PLL_CNTL_1, 4);
     initial_fbdiv = PLLCNTL1.from_buffer(initial_fbdiv)
-    # print(initial_fbdiv.fbdiv)
     
     set_l2cpu_pll(chip, mhz)
 
-    initial_post_dividers = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_5, initial_post_dividers)
+    initial_post_dividers = chip.noc_read(NOC_0, ARC_X, ARC_Y, PLL4_BASE+PLL_CNTL_5, 4);
     initial_post_dividers = PLLCNTL5.from_buffer(initial_post_dividers)
-    # print(list(initial_post_dividers.postdiv))
 
-    initial_fbdiv = bytearray(4)
-    chip.axi_read(PLL4_BASE+PLL_CNTL_1, initial_fbdiv)
+    initial_fbdiv = chip.noc_read(NOC_0, ARC_X, ARC_Y, PLL4_BASE+PLL_CNTL_1, 4);
     initial_fbdiv = PLLCNTL1.from_buffer(initial_fbdiv)
-    # print(initial_fbdiv.fbdiv)
     
 if __name__ == "__main__":
     # l2_cpu actually seems unused. Maybe remove?

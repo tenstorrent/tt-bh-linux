@@ -2,12 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from argparse import ArgumentParser
+from kmdif import TenstorrentDevice
 import sys
-import os
-from pyluwen import PciChip
-from tt_smi.tt_smi_backend import pci_board_reset
 import clock
 import time
+
+NOC_0 = 0
+ARC_X = 8
+ARC_Y = 0
+RESET_SCRATCH = lambda N: 0x80030400 + ((N) * 4)
+ARC_TELEMETRY_PTR = RESET_SCRATCH(13)
+ARC_TELEMETRY_DATA = RESET_SCRATCH(12)
+TAG_ENABLED_GDDR = 36
+TAG_ENABLED_L2CPU = 37
 
 l2cpu_tile_mapping = {
     0: (8, 3),
@@ -54,15 +61,15 @@ def parse_args():
     return args
 
 
-def reset_x280(chip, l2cpu_indices):
+def reset_x280(device, l2cpu_indices):
     reset_unit_base = 0x80030000
-    clock.main(0, 200)
-    l2cpu_reset_val = chip.axi_read32(reset_unit_base + 0x14) # L2CPU_RESET
+    clock.main(200)
+    l2cpu_reset_val = device.noc_read32(NOC_0, ARC_X, ARC_Y, reset_unit_base + 0x14) # L2CPU_RESET
     for l2cpu_index in l2cpu_indices:
         l2cpu_reset_val |= 1 << (l2cpu_index + 4)
-    chip.axi_write32(reset_unit_base + 0x14, l2cpu_reset_val) # L2CPU_RESET
-    chip.axi_read32(reset_unit_base + 0x14) # L2CPU_RESET
-    clock.main(0, 1750)
+    device.noc_write32(NOC_0, ARC_X, ARC_Y, reset_unit_base + 0x14, l2cpu_reset_val) # L2CPU_RESET
+    device.noc_read32(NOC_0, ARC_X, ARC_Y, reset_unit_base + 0x14) # L2CPU_RESET
+    clock.main(1750)
 
 def read_bin_file(file_path):
     with open(file_path, 'rb') as file:
@@ -76,16 +83,36 @@ def read_bin_file(file_path):
             file_bytes += b'\x00' * padding_bytes_needed
     return file_bytes
 
+
+def read_telemetry(device, tag):
+    base_addr = device.noc_read32(NOC_0, ARC_X, ARC_Y, ARC_TELEMETRY_PTR)
+    data_addr = device.noc_read32(NOC_0, ARC_X, ARC_Y, ARC_TELEMETRY_DATA)
+    num_entries = device.noc_read32(NOC_0, ARC_X, ARC_Y, base_addr + 4);
+    tags_addr = base_addr + 8
+
+    for i in range(num_entries):
+        tag_entry = device.noc_read32(NOC_0, ARC_X, ARC_Y, tags_addr + (i * 4));
+        tag_id = tag_entry & 0xFFFF;
+        offset = (tag_entry >> 16) & 0xFFFF;
+        addr = data_addr + (offset * 4);
+        if tag_id == tag:
+            return device.noc_read32(NOC_0, ARC_X, ARC_Y, addr)
+
+    return None
+
+
 def main():
     args = parse_args()
     l2cpus_to_boot = args.l2cpu
-    chip = PciChip(0)
-    pci_board_reset([0])
+
+    device = TenstorrentDevice("/dev/tenstorrent/0")
+    device.reset_device()
 
     time.sleep(1) # Sleep 1s, telemetry sometimes not available immediately after reset
-    telemetry = chip.get_telemetry()
-    enabled_l2cpu = telemetry.enabled_l2cpu
-    enabled_gddr = telemetry.enabled_gddr
+
+    enabled_l2cpu = read_telemetry(device, TAG_ENABLED_L2CPU)
+    enabled_gddr = read_telemetry(device, TAG_ENABLED_GDDR)
+
     for l2cpu in l2cpus_to_boot:
         assert (enabled_l2cpu >> l2cpu) & 1, "L2CPU {} is harvested".format(l2cpu)
         assert (enabled_gddr >> l2cpu_gddr_enable_bit_mapping[l2cpu]) & 1, "DRAM attached to L2CPU {} is harvested".format(l2cpu)
@@ -109,37 +136,35 @@ def main():
 
         # Enable the whole cache when using DRAM
         L3_REG_BASE=0x02010000
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L3_REG_BASE + 8, 0xf)
-        data = chip.noc_read32(0, l2cpu_noc_x, l2cpu_noc_y, L3_REG_BASE + 8)
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, L3_REG_BASE + 8, 0xf)
+        data = device.noc_read32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, L3_REG_BASE + 8)
 
         print(f"Writing OpenSBI to 0x{opensbi_addr:x}")
-        chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, opensbi_addr, opensbi_bytes)
+        device.noc_write(NOC_0, l2cpu_noc_x, l2cpu_noc_y, opensbi_addr, opensbi_bytes)
         print(f"Writing rootfs to 0x{rootfs_addr:x}")
-        chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, rootfs_addr, rootfs_bytes)
+        device.noc_write(NOC_0, l2cpu_noc_x, l2cpu_noc_y, rootfs_addr, rootfs_bytes)
 
         if args.kernel_dst and args.kernel_bin:
             print(f"Writing Kernel to 0x{kernel_addr:x}")
-            chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, kernel_addr, kernel_bytes)
+            device.noc_write(NOC_0, l2cpu_noc_x, l2cpu_noc_y, kernel_addr, kernel_bytes)
         if args.dtb_dst and args.dtb_bin:
             print(f"Writing dtb to 0x{dtb_addr:x}")
-            chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, dtb_addr, dtb_bytes)
+            device.noc_write(NOC_0, l2cpu_noc_x, l2cpu_noc_y, dtb_addr, dtb_bytes)
 
         reset_vector_0 = opensbi_addr & 0xffffffff
         reset_vector_1 = opensbi_addr >> 32
 
-        
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x0, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_0_0
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x4, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_0_1
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x8, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_1_0
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0xC, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_1_1
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x10, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_2_0
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x14, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_2_1
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x18, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_3_0
-        chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x1C, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_3_1
-        # input("Waiting")
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x0, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_0_0
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x4, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_0_1
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x8, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_1_0
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0xC, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_1_1
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x10, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_2_0
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x14, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_2_1
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x18, reset_vector_0) # l2cpu.RESET_VECTOR_CORE_3_0
+        device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, l2cpu_base + 0x1C, reset_vector_1) # l2cpu.RESET_VECTOR_CORE_3_1
 
     if args.boot:
-        reset_x280(chip, l2cpus_to_boot)
+        reset_x280(device, l2cpus_to_boot)
     else:
         print("Not booting (you didn't pass --boot)")
 
@@ -148,8 +173,8 @@ def main():
         # Configure L2 prefetchers
         L2_PREFETCH_BASE=0x02030000
         for offset in (0x0000, 0x2000, 0x4000, 0x6000):
-            chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L2_PREFETCH_BASE+offset, 0x15811)
-            chip.noc_write32(0, l2cpu_noc_x, l2cpu_noc_y, L2_PREFETCH_BASE+4+offset, 0x38c84e)
+            device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, L2_PREFETCH_BASE+offset, 0x15811)
+            device.noc_write32(NOC_0, l2cpu_noc_x, l2cpu_noc_y, L2_PREFETCH_BASE+4+offset, 0x38c84e)
 
 
 if __name__ == "__main__":
