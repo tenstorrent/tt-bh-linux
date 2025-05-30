@@ -259,7 +259,7 @@ endef
 
 # Clone the Tenstorrent Linux kernel source tree
 clone_linux: _need_git
-	$(call _clone,https://github.com/tenstorrent/linux,linux,tt-blackhole)
+	$(call _clone,https://github.com/asrinivasanTT/linux,linux,tt-blackhole-virtio)
 
 # Clone the Tenstorrent opensbi source tree
 clone_opensbi: _need_git
