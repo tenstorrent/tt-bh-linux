@@ -19,7 +19,7 @@ endif
 # if you have one
 DISK_IMAGE := rootfs.ext4
 
-L2CPU := 0
+L2CPU ?= 0
 
 # Use bash as the shell
 SHELL := /bin/bash
@@ -82,7 +82,7 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_pyth
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
-	./console/tt-bh-linux
+	./console/tt-bh-linux --l2cpu $(L2CPU)
 
 # Connect over SSH (requires a booted RISC-V)
 ssh:
