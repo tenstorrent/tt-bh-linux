@@ -80,6 +80,9 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_pyth
 	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux --l2cpu $(L2CPU)
 
+boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
+	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
+
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
 	./console/tt-bh-linux
@@ -146,6 +149,10 @@ build_ssh_key: _need_e2tools
 # Build everything
 build_all: build_linux build_opensbi build_hosttool
 	@echo "Build complete! Now run 'make boot' to run Linux"
+
+build_dtb_all:
+	dtc misc/blackhole-p100-2.dts > blackhole-p100-2.dtb
+	dtc misc/blackhole-p100-3.dts > blackhole-p100-3.dtb
 
 #################################
 # Recipes that clean things
@@ -283,6 +290,10 @@ _need_opensbi:
 
 _need_dtb:
 	$(call _need_file,blackhole-p100.dtb,build,build_linux)
+
+_need_dtb_all:
+	$(call _need_file,blackhole-p100-2.dtb,build,build_dtb_all)
+	$(call _need_file,blackhole-p100-3.dtb,build,build_dtb_all)
 
 _need_rootfs:
 	$(call _need_file,$(DISK_IMAGE),build,download_rootfs)
