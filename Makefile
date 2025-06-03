@@ -49,6 +49,8 @@ help:
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
 	@echo "    ssh                    # SSH to machine (requires a booted RISC-V)"
+	@echo "    boot_all               # Boot all 4 L2CPUs on Blackhole Chip
+	@echo "    connect_all            # Launch 4x4 Tmux grid and connect to each L2CPU
 	@echo "    build_linux            # Build the kernel"
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
@@ -90,6 +92,28 @@ connect: _need_hosttool _need_ttkmd
 # Connect over SSH (requires a booted RISC-V)
 ssh:
 	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
+
+# Launch tmux with a 2x2 grid and connect to each l2cpu in each
+connect_all: _need_tmux
+	# Kill any existing sessions named connect_all
+	SESSION=connect_all
+	tmux has-session -t "$SESSION" 2>/dev/null && tmux kill-session -t "$SESSION" || true
+
+	tmux new-session  -d -s "$SESSION" './console/tt-bh-linux --l2cpu 0' 	# pane 0
+	tmux split-window -h -t "$SESSION":0 './console/tt-bh-linux --l2cpu 1' 	# pane 1 (right)
+	tmux select-pane   -t "$SESSION":0.0 									# back to pane 0
+	tmux split-window -v -t "$SESSION":0 './console/tt-bh-linux --l2cpu 2' 	# pane 2 (bottom-left)
+	tmux select-pane   -t "$SESSION":0.1 									# go to pane 1
+	tmux split-window -v -t "$SESSION":0 './console/tt-bh-linux --l2cpu 3' 	# pane 3 (bottom-right)
+	tmux select-layout -t "$SESSION":0 tiled 								# ensure 2x2 grid
+
+	# If we're already inside a tmux session, we need to use switch-client
+	if [ -n "$$TMUX" ]; then \
+        tmux switch-client -t "$SESSION"; \
+    else \
+        tmux attach-session -t "$SESSION"; \
+    fi
+
 
 #################################
 # Recipes that build things
@@ -218,7 +242,7 @@ install_qemu:
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools)
+	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -347,6 +371,9 @@ _need_ssh_key:
 _need_tt_installer:
 	$(call _need_file,tt-installer-v1.1.0.sh,download,download_tt_installer)
 
+_need_tmux:
+	$(call _need_prog,tmux,install,install_hosttool_pkgs)
+
 _need_libvdevslirp:
 	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install_hosttool_pkgs)
 
@@ -390,6 +417,7 @@ endef
 
 .PHONY: apt_update \
 	boot \
+	boot_all
 	build_all \
 	build_hosttool \
 	build_linux \
@@ -406,6 +434,7 @@ endef
 	clone_linux \
 	clone_opensbi \
 	connect \
+	connect_all \
 	download_all \
 	download_prebuilt \
 	download_rootfs \
@@ -430,6 +459,7 @@ endef
 	_need_riscv64_toolchain \
 	_need_rootfs \
 	_need_tt_installer \
+	_need_tmux \
 	_need_unxz \
 	_need_unzip \
 	_need_libvdevslirp
