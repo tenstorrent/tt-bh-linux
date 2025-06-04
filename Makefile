@@ -80,8 +80,17 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_pyth
 	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux --l2cpu $(L2CPU)
 
-boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
+boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_tmux
 	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
+	SESSION=bootall
+	tmux new-session  -d -s "$SESSION" './console/tt-bh-linux --l2cpu 0'   # pane 0
+	tmux split-window -h -t "$SESSION":0 './console/tt-bh-linux --l2cpu 1'  # pane 1 (right)
+	tmux select-pane   -t "$SESSION":0.0                         # back to pane 0
+	tmux split-window -v -t "$SESSION":0 './console/tt-bh-linux --l2cpu 2'  # pane 2 (bottom-left)
+	tmux select-pane   -t "$SESSION":0.1                         # go to pane 1
+	tmux split-window -v -t "$SESSION":0 './console/tt-bh-linux --l2cpu 3'  # pane 3 (bottom-right)
+	tmux select-layout -t "$SESSION":0 tiled                     # ensure 2×2 grid
+	tmux attach       -t "$SESSION"
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
@@ -218,7 +227,7 @@ install_qemu:
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools)
+	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -312,7 +321,7 @@ _need_opensbi_tree:
 	$(call _need_file,opensbi,clon,clone_opensbi)
 
 _need_dtc:
-	$(call _need_prog,dtc,install,install_tool_pkgs)
+	$(call _need_prog,dtc,install,install_hosttool_pkgs)
 
 _need_gcc:
 	$(call _need_prog,gcc,install,install_kernel_pkgs)
@@ -324,22 +333,22 @@ _need_luwen:
 	$(call _need_pylib,pyluwen,install,install_tt_installer)
 
 _need_python:
-	$(call _need_prog,python3,install,install_tool_pkgs)
+	$(call _need_prog,python3,install,install_hosttool_pkgs)
 
 _need_riscv64_toolchain:
 	$(call _need_prog,riscv64-linux-gnu-gcc,install,install_toolchain_pkgs)
 
 _need_unxz:
-	$(call _need_prog,unxz,install,install_tool_pkgs)
+	$(call _need_prog,unxz,install,install_hosttool_pkgs)
 
 _need_wget:
-	$(call _need_prog,wget,install,install_tool_pkgs)
+	$(call _need_prog,wget,install,install_hosttool_pkgs)
 
 _need_unzip:
-	$(call _need_prog,unzip,install,install_tool_pkgs)
+	$(call _need_prog,unzip,install,install_hosttool_pkgs)
 
 _need_e2tools:
-	$(call _need_prog,e2cp,install,install_tool_pkgs)
+	$(call _need_prog,e2cp,install,install_hosttool_pkgs)
 
 _need_ssh_key:
 	$(call _need_file,user,build_ssh_key)
@@ -349,6 +358,9 @@ _need_tt_installer:
 
 _need_libvdevslirp:
 	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install_hosttool_pkgs)
+
+_need_tmux:
+	$(call _need_prog,tmux,install,install_hosttool_pkgs)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
@@ -415,7 +427,6 @@ endef
 	install_hosttool_pkgs \
 	install_kernel_pkgs \
 	install_qemu \
-	install_tool_pkgs \
 	install_tt_installer \
 	_need_dtb \
 	_need_dtc \
@@ -432,4 +443,5 @@ endef
 	_need_tt_installer \
 	_need_unxz \
 	_need_unzip \
-	_need_libvdevslirp
+	_need_libvdevslirp \
+	_need_tmux
