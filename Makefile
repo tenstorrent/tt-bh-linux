@@ -49,8 +49,8 @@ help:
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
 	@echo "    ssh                    # SSH to machine (requires a booted RISC-V)"
-	@echo "    boot_all               # Boot all 4 L2CPUs on Blackhole Chip
-	@echo "    connect_all            # Launch 4x4 Tmux grid and connect to each L2CPU
+	@echo "    boot_all               # Boot all 4 L2CPUs on Blackhole Chip"
+	@echo "    connect_all            # Launch 4x4 Tmux grid and connect to each L2CPU"
 	@echo "    build_linux            # Build the kernel"
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
