@@ -24,6 +24,9 @@ jobs:
         sudo apt-get install -qq make zip
         make install_all
 
+    - name: Run make help
+      run: make help
+
     - name: Clone Linux and OpenSBI
       run: make clone_all
 
