@@ -2,10 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <atomic>
+#include <mutex> // Added for std::mutex
+#include <string> // Added for std::string
+#include <iostream> // Added for std::cout, std::cerr
+#include <getopt.h> // Added for getopt_long
+#include <thread> // Added for std::thread
+
 #include "console.hpp"
+#include "disk.hpp"
 #include "network.hpp"
 
 std::atomic<bool> exit_thread_flag{false};
+std::mutex interrupt_register_lock; // Global mutex for MMIO access
 
 void console_main(int l2cpu){
     printf("Press Ctrl-A x to exit.\n\n");
@@ -26,18 +34,32 @@ void console_main(int l2cpu){
     }
 }
 
-void network_main(int l2cpu){
+void disk_main(int l2cpu, std::mutex& interrupt_register_lock, const std::string& disk_image_path){
     while (!exit_thread_flag){
-      network_loop(l2cpu, exit_thread_flag);
+        VirtioBlk device(l2cpu, exit_thread_flag, interrupt_register_lock, disk_image_path);
+        device.device_setup();
+        device.device_loop();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void network_main(int l2cpu, std::mutex& interrupt_register_lock){
+    while (!exit_thread_flag){
+        VirtioNet device(l2cpu, exit_thread_flag, interrupt_register_lock);
+        device.device_setup();
+        device.device_loop();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
 int main(int argc, char **argv){
     int l2cpu=0;
-    const char* const short_opts = "l:h";
+    std::string disk_image_path = "rootfs.ext4";
+
+    const char* const short_opts = "l:d:h";
     const option long_opts[] = {
             {"l2cpu", required_argument, nullptr, 'l'},
+            {"disk", required_argument, nullptr, 'd'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, no_argument, nullptr, 0}
     };
@@ -54,12 +76,15 @@ int main(int argc, char **argv){
         case 'l':
             l2cpu = std::stoi(optarg);
             break;
-
+        case 'd': // Handle disk image option
+            disk_image_path = optarg;
+            break;
         case 'h': // -h or --help
         case '?': // Unrecognized option
         default:
             std::cout <<
             "--l2cpu <l>:         L2CPU to attach to\n"
+            "--disk <path>:       Path to the disk image (default: rootfs.ext4)\n"
             "--help:              Show help\n";
             exit(1);
         }
@@ -71,7 +96,9 @@ int main(int argc, char **argv){
     }
 
   std::thread console_thread(console_main, l2cpu);
-  std::thread network_thread(network_main, l2cpu);
+  std::thread disk_thread(disk_main, l2cpu, std::ref(interrupt_register_lock), disk_image_path);
+  std::thread network_thread(network_main, l2cpu, std::ref(interrupt_register_lock));
   console_thread.join();
+  disk_thread.join();
   network_thread.join();
 }
