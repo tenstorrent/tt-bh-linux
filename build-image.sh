@@ -57,7 +57,7 @@ trap cleanup EXIT
 
 info "Installing system with debootstrap"
 mkdir -p $CACHE
-PACKAGES=sudo,openssh-server,systemd-timesyncd,vim,python3,make,gcc,libc6-dev,neowofetch,systemd-resolved,dbus,btop,ninvaders
+PACKAGES=sudo,openssh-server,systemd-timesyncd,vim,python3,make,gcc,libc6-dev,neowofetch,systemd-resolved,dbus,htop,ninvaders,git,wget
 debootstrap --cache-dir $CACHE --include $PACKAGES --arch riscv64 trixie $MOUNT http://deb.debian.org/debian
 
 info "Mounting filesystems"
