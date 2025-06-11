@@ -73,6 +73,8 @@ protected:
     uint32_t *queue_used_low; // VIRTIO_MMIO_QUEUE_USED_LOW
     uint32_t *queue_used_high; // VIRTIO_MMIO_QUEUE_USED_HIGH
     uint32_t *queue_select; // VIRTIO_MMIO_QUEUE_SEL
+    uint32_t *sw_impl; // VIRTIO_MMIO_SW_IMPL
+    uint32_t *sel_generation; // VIRTIO_MMIO_SEL_GENERATION
 
     uint32_t device_features_list[2] = {0, 0}; // Default, set in subclass constructor or setup
 
@@ -130,10 +132,13 @@ public:
         queue_used_low = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_USED_LOW);
         queue_used_high = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_USED_HIGH);
         queue_select = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_SEL);
+        sw_impl = reinterpret_cast<uint32_t*>(mmio_base + 0x018);
+        sel_generation = reinterpret_cast<uint32_t*>(mmio_base + 0x01c);
 
         *magic_value = ('v' | 'i' << 8 | 'r' << 16 | 't' << 24);
         *version = 2;
         *queue_num_max = queue_size;
+        *sw_impl = 1;
     }
 
     /*
@@ -200,8 +205,14 @@ public:
                 break;
             }
         }
+        uint32_t curr_device_features_sel=0, prev_device_features_sel=0;
         while (!exit_thread_flag) {
-            *device_features = device_features_list[*device_features_sel];
+            curr_device_features_sel = *device_features_sel;
+            if (curr_device_features_sel != prev_device_features_sel){
+                *device_features = device_features_list[*device_features_sel];
+                *sel_generation = *sel_generation + 1;
+                prev_device_features_sel = curr_device_features_sel;
+            }
             // TODO: read driver_features and do negotiation?
 
             if (*status & VIRTIO_CONFIG_S_FEATURES_OK) {
@@ -222,18 +233,19 @@ public:
         This implementation is still buggy timing wise sometimes
         We fail to get past this stage. Improve this
         */
-        uint32_t prev_queue_select = -1;
+        uint32_t prev_queue_select = -1, curr_queue_select=-1, queue_ready_val=0;
         while (!exit_thread_flag) {
-            uint32_t queue_select_val = *queue_select;
-            uint32_t queue_ready_val = *queue_ready;
+            curr_queue_select = *queue_select;
+            queue_ready_val = *queue_ready;
             *queue_ready = 0;
-
-            if (queue_ready_val && (queue_select_val != prev_queue_select)) {
-                descriptor_table_address[queue_select_val] = ((uint64_t)(*queue_desc_high) << 32) | (*queue_desc_low);
-                available_ring_address[queue_select_val] = ((uint64_t)(*queue_avail_high) << 32) | (*queue_avail_low);
-                used_ring_address[queue_select_val] = ((uint64_t)(*queue_used_high) << 32) | (*queue_used_low);
-                prev_queue_select = queue_select_val;
-                if (queue_select_val == (num_queues - 1))
+            
+            if (queue_ready_val && (curr_queue_select != prev_queue_select)) {
+                descriptor_table_address[curr_queue_select] = ((uint64_t)(*queue_desc_high) << 32) | (*queue_desc_low);
+                available_ring_address[curr_queue_select] = ((uint64_t)(*queue_avail_high) << 32) | (*queue_avail_low);
+                used_ring_address[curr_queue_select] = ((uint64_t)(*queue_used_high) << 32) | (*queue_used_low);
+                prev_queue_select = curr_queue_select;
+                *sel_generation = *sel_generation + 1;
+                if (curr_queue_select == (num_queues - 1))
                     break;
             }
             usleep(1);
