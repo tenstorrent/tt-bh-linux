@@ -78,20 +78,23 @@ help:
 # Recipes that run things
 
 # Boot one L2CPU in Blackhole RISC-V CPU
-boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
+boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd userdata-$(L2CPU)
 	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
-	./console/tt-bh-linux --l2cpu $(L2CPU) -d rootfs.l2cpu-$(L2CPU) -c c-i.img
+	./console/tt-bh-linux --l2cpu $(L2CPU) -d rootfs.l2cpu-$(L2CPU) -c user-data-$(L2CPU).img
 
 boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
 	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
-	./console/tt-bh-linux --l2cpu $(L2CPU) -b rootfs.l2cpu-$(L2CPU)
+	./console/tt-bh-linux --l2cpu $(L2CPU) -d rootfs.l2cpu-$(L2CPU) -c user-data-$(L2CPU).img
 
 # Connect over SSH (requires a booted RISC-V)
 ssh:
 	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
+
+userdata-$(L2CPU): user-data-$(L2CPU).yaml _need_cloud_image_utils
+	cloud-localds -d raw user-data-$(L2CPU).img  user-data-$(L2CPU).yaml
 
 SESSION = connect_all
 # Launch tmux with a 2x2 grid and connect to each l2cpu in each
@@ -242,7 +245,7 @@ install_qemu:
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux)
+	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux cloud-image-utils)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -315,6 +318,9 @@ _need_opensbi:
 
 _need_dtb:
 	$(call _need_file,blackhole-p100.dtb,build,build_linux)
+
+_need_cloud_image_utils:
+	$(call _need_prog,cloud-localds,install,install_hosttool_pkgs)
 
 _need_dtb_all:
 	$(call _need_file,blackhole-p100-2.dtb,build,build_dtb_all)
@@ -447,6 +453,7 @@ endef
 	install_qemu \
 	install_tool_pkgs \
 	install_tt_installer \
+	_need_cloud_image_utils \
 	_need_dtb \
 	_need_dtc \
 	_need_gcc \

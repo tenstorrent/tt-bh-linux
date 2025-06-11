@@ -54,7 +54,7 @@ public:
     uint8_t buffer[PACKET_SIZE];
 
     VirtioNet(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock)
-        : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, 32, ((4ULL * 1024 * 1024))) {
+        : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, 32, ((8ULL * 1024 * 1024))) {
 
         num_queues = 2;
         device_features_list[0] = 1<<VIRTIO_NET_F_GUEST_CSUM;
