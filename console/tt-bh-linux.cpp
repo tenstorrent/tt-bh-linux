@@ -1,9 +1,12 @@
 // SPDX-FileCopyrightText: © 2025 Tenstorrent AI ULC
 // SPDX-License-Identifier: Apache-2.0
 
+#include <sys/file.h>
 #include <atomic>
 #include "console.hpp"
 #include "network.hpp"
+
+#define LOCK_FILE "/var/lock/tt-bh-linux.lock"
 
 std::atomic<bool> exit_thread_flag{false};
 
@@ -42,6 +45,22 @@ int main(int argc, char **argv){
             {nullptr, no_argument, nullptr, 0}
     };
 
+    int lock_fd = open(LOCK_FILE, O_RDWR | O_CREAT, 0600);
+    if (lock_fd < 0) {
+        perror("Failed to create lock file");
+        return -1;
+    }
+
+    if (flock(lock_fd, LOCK_EX | LOCK_NB) < 0) {
+        if (errno == EWOULDBLOCK) {
+            std::cerr << "Another instance is already running" << std::endl;
+        } else {
+            perror("Failed to lock file");
+        }
+        close(lock_fd);
+        return -1;
+    }
+
     while (true)
     {
         const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
@@ -74,4 +93,7 @@ int main(int argc, char **argv){
   std::thread network_thread(network_main, l2cpu);
   console_thread.join();
   network_thread.join();
+
+    close(lock_fd);
+    unlink(LOCK_FILE);
 }
