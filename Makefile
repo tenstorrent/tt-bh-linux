@@ -15,11 +15,11 @@ else
 	PYTHON := python3
 endif
 
+L2CPU ?= 0
+
 # Default riscv64 disk image file. Change this to point at your local image
 # if you have one
-DISK_IMAGE := rootfs.ext4
-
-L2CPU ?= 0
+DISK_IMAGE := rootfs.l2cpu-$(L2CPU)
 
 # Use bash as the shell
 SHELL := /bin/bash
@@ -78,20 +78,23 @@ help:
 # Recipes that run things
 
 # Boot one L2CPU in Blackhole RISC-V CPU
-boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
-	./console/tt-bh-linux --l2cpu $(L2CPU)
+boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd userdata-$(L2CPU)
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	./console/tt-bh-linux --l2cpu $(L2CPU) -d rootfs.l2cpu-$(L2CPU) -c user-data-$(L2CPU).img
 
 boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
 	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
-	./console/tt-bh-linux --l2cpu $(L2CPU)
+	./console/tt-bh-linux --l2cpu $(L2CPU) -d rootfs.l2cpu-$(L2CPU) -c user-data-$(L2CPU).img
 
 # Connect over SSH (requires a booted RISC-V)
 ssh:
 	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
+
+userdata-%: user-data-%.yaml _need_cloud_image_utils
+	cloud-localds -d raw user-data-$*.img  user-data-$*.yaml
 
 SESSION = connect_all
 # Launch tmux with a 2x2 grid and connect to each l2cpu in each
@@ -99,12 +102,12 @@ connect_all: _need_tmux
 	# Kill any existing sessions named connect_all
 	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
 
-	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0' 	# pane 0
-	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1' 	# pane 1 (right)
+	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0 -b rootfs.l2cpu-0' 	# pane 0
+	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1 -b rootfs.l2cpu-1' 	# pane 1 (right)
 	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2' 	# pane 2 (bottom-left)
+	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2 -b rootfs.l2cpu-2' 	# pane 2 (bottom-left)
 	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3' 	# pane 3 (bottom-right)
+	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3 -b rootfs.l2cpu-3' 	# pane 3 (bottom-right)
 	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
 
 	# If we're already inside a tmux session, we need to use switch-client
@@ -242,7 +245,7 @@ install_qemu:
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux)
+	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux cloud-image-utils)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -259,7 +262,7 @@ endef
 
 # Clone the Tenstorrent Linux kernel source tree
 clone_linux: _need_git
-	$(call _clone,https://github.com/tenstorrent/linux,linux,tt-blackhole)
+	$(call _clone,https://github.com/asrinivasanTT/linux,linux,tt-blackhole-virtio)
 
 # Clone the Tenstorrent opensbi source tree
 clone_opensbi: _need_git
@@ -288,7 +291,8 @@ download_rootfs: _need_wget _need_unxz
 	$(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.2/tt-bh-disk-image.zip)
 	unzip tt-bh-disk-image.zip
 	rm tt-bh-disk-image.zip
-	mv debian-riscv64.img rootfs.ext4
+	#mv debian-riscv64.img rootfs.ext4
+	ln -s debian-riscv64.img rootfs.l2cpu-$(L2CPU)
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
@@ -314,6 +318,9 @@ _need_opensbi:
 
 _need_dtb:
 	$(call _need_file,blackhole-p100.dtb,build,build_linux)
+
+_need_cloud_image_utils:
+	$(call _need_prog,cloud-localds,install,install_hosttool_pkgs)
 
 _need_dtb_all:
 	$(call _need_file,blackhole-p100-2.dtb,build,build_dtb_all)
@@ -446,6 +453,7 @@ endef
 	install_qemu \
 	install_tool_pkgs \
 	install_tt_installer \
+	_need_cloud_image_utils \
 	_need_dtb \
 	_need_dtc \
 	_need_gcc \

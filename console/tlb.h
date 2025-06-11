@@ -6,8 +6,12 @@
 #include <unistd.h>
 #include <iostream>
 #include <memory>
+#include <cassert>
 
 #include "ioctl.h"
+
+static constexpr size_t TWO_MEG = 1 << 21;
+static constexpr size_t FOUR_GIG = 1ULL << 32;
 
 struct xy_t
 {
@@ -24,7 +28,7 @@ class TlbHandle
     size_t tlb_size;
 
 public:
-    TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &config);
+    TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &config, void* base=nullptr);
 
     uint8_t* data();
     size_t size() const;
@@ -33,9 +37,9 @@ public:
 
 };
 
-class TlbWindow2M
+template <size_t WINDOW_SIZE>
+class TlbWindow
 {
-    static constexpr size_t WINDOW_SIZE = 1 << 21;
     static constexpr size_t WINDOW_MASK = WINDOW_SIZE - 1;
     static_assert((WINDOW_SIZE & WINDOW_MASK) == 0, "WINDOW_SIZE must be a power of 2");
 
@@ -43,7 +47,7 @@ class TlbWindow2M
     std::unique_ptr<TlbHandle> window;
 
 public:
-    TlbWindow2M(int fd, uint16_t x, uint16_t y, uint64_t addr);
+    TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr, void* base=nullptr);
 
     void write32(uint64_t addr, uint32_t value);
 
@@ -51,4 +55,42 @@ public:
 
     uint8_t* get_window();
 };
+
+template <size_t WINDOW_SIZE>
+TlbWindow<WINDOW_SIZE>::TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr, void* base)
+: offset(addr & WINDOW_MASK)
+{
+    tenstorrent_noc_tlb_config config{
+        .addr = addr & ~WINDOW_MASK,
+        .x_end = x,
+        .y_end = y,
+    };
+
+    window = std::make_unique<TlbHandle>(fd, WINDOW_SIZE, config, base);
+}
+
+
+template <size_t WINDOW_SIZE>
+void TlbWindow<WINDOW_SIZE>::write32(uint64_t addr, uint32_t value){
+    assert(offset + addr + 4 <= WINDOW_SIZE);
+    assert(((offset + addr) % 4) == 0);
+    void *ptr = window->data() + offset + addr;
+    *reinterpret_cast<volatile uint32_t *>(ptr) = value;
+}
+
+template <size_t WINDOW_SIZE>
+uint32_t TlbWindow<WINDOW_SIZE>::read32(uint64_t addr){
+    assert(offset + addr + 4 <= WINDOW_SIZE);
+    assert(((offset + addr) % 4) == 0);
+    void *ptr = window->data() + offset + addr;
+    return *reinterpret_cast<volatile uint32_t *>(ptr);
+}
+
+template <size_t WINDOW_SIZE>
+uint8_t* TlbWindow<WINDOW_SIZE>::get_window(){
+    return window.get()->data() + offset;
+}
+
+using TlbWindow2M = TlbWindow<TWO_MEG>;
+using TlbWindow4G = TlbWindow<FOUR_GIG>;
 #endif
