@@ -15,11 +15,11 @@ else
 	PYTHON := python3
 endif
 
+L2CPU ?= 0
+
 # Default riscv64 disk image file. Change this to point at your local image
 # if you have one
-DISK_IMAGE := rootfs.ext4
-
-L2CPU ?= 0
+DISK_IMAGE := rootfs.l2cpu-$(L2CPU)
 
 # Use bash as the shell
 SHELL := /bin/bash
@@ -80,14 +80,14 @@ help:
 # Boot one L2CPU in Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
 	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
-	./console/tt-bh-linux --l2cpu $(L2CPU)
+	./console/tt-bh-linux --l2cpu $(L2CPU) -d rootfs.l2cpu-$(L2CPU) -c c-i.img
 
 boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
 	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
-	./console/tt-bh-linux --l2cpu $(L2CPU)
+	./console/tt-bh-linux --l2cpu $(L2CPU) -b rootfs.l2cpu-$(L2CPU)
 
 # Connect over SSH (requires a booted RISC-V)
 ssh:
@@ -99,12 +99,12 @@ connect_all: _need_tmux
 	# Kill any existing sessions named connect_all
 	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
 
-	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0' 	# pane 0
-	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1' 	# pane 1 (right)
+	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0 -b rootfs.l2cpu-0' 	# pane 0
+	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1 -b rootfs.l2cpu-1' 	# pane 1 (right)
 	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2' 	# pane 2 (bottom-left)
+	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2 -b rootfs.l2cpu-2' 	# pane 2 (bottom-left)
 	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3' 	# pane 3 (bottom-right)
+	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3 -b rootfs.l2cpu-3' 	# pane 3 (bottom-right)
 	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
 
 	# If we're already inside a tmux session, we need to use switch-client
@@ -288,7 +288,8 @@ download_rootfs: _need_wget _need_unxz
 	$(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.2/tt-bh-disk-image.zip)
 	unzip tt-bh-disk-image.zip
 	rm tt-bh-disk-image.zip
-	mv debian-riscv64.img rootfs.ext4
+	#mv debian-riscv64.img rootfs.ext4
+	ln -s debian-riscv64.img rootfs.l2cpu-$(L2CPU)
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
