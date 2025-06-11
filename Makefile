@@ -93,8 +93,8 @@ connect: _need_hosttool _need_ttkmd
 ssh:
 	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
-userdata-$(L2CPU): user-data-$(L2CPU).yaml _need_cloud_image_utils
-	cloud-localds -d raw user-data-$(L2CPU).img  user-data-$(L2CPU).yaml
+userdata-%: user-data-%.yaml _need_cloud_image_utils
+	cloud-localds -d raw user-data-$*.img  user-data-$*.yaml
 
 SESSION = connect_all
 # Launch tmux with a 2x2 grid and connect to each l2cpu in each

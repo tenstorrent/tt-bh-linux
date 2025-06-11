@@ -1,0 +1,32 @@
+#cloud-config
+hostname: tt-blackhole-2
+fqdn: tt-blackhole-2.local
+
+users:
+  - name: ttuser
+    gecos: Tenstorrent User
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin, sudo
+    shell: /bin/bash
+    lock_passwd: false
+    # Create default user with empty password. You might want to set your own.
+    passwd: ""
+    ssh_authorized_keys:
+      # Add your SSH authorized keys here 
+
+# Disallow password auth since we're creating the user with empty password
+ssh_pwauth: false
+
+#chpasswd:
+#  list: |
+#    ubuntu:ubuntu
+#  expire: false
+
+packages:
+  - net-tools
+  - htop
+
+runcmd:
+  - echo "Boot complete at $(date)" > /var/log/first-boot.log
+
+final_message: "The system is finally up, after $UPTIME seconds"
