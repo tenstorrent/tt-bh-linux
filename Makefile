@@ -259,7 +259,7 @@ endef
 
 # Clone the Tenstorrent Linux kernel source tree
 clone_linux: _need_git
-	$(call _clone,https://github.com/asrinivasanTT/linux,linux,tt-blackhole-virtio)
+	$(call _clone,https://github.com/asrinivasanTT/linux,linux,tt-blackhole-virtio-sw_impl_register_2way_locking)
 
 # Clone the Tenstorrent opensbi source tree
 clone_opensbi: _need_git
