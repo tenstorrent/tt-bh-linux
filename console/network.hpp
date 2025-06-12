@@ -53,8 +53,8 @@ public:
     int slirp_fd = -1;
     uint8_t buffer[PACKET_SIZE];
 
-    VirtioNet(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock)
-        : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, 32, ((4ULL * 1024 * 1024))) {
+    VirtioNet(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock, int interrupt_number_, uint64_t mmio_region_offset_)
+        : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, interrupt_number_, mmio_region_offset_) {
 
         num_queues = 2;
         device_features_list[0] = 1<<VIRTIO_NET_F_GUEST_CSUM;
