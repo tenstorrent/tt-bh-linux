@@ -34,18 +34,18 @@ void console_main(int l2cpu){
     }
 }
 
-void disk_main(int l2cpu, std::mutex& interrupt_register_lock, const std::string& disk_image_path){
+void disk_main(int l2cpu, std::mutex& interrupt_register_lock, int interrupt_number, uint64_t mmio_region_offset, const std::string& disk_image_path){
     while (!exit_thread_flag){
-        VirtioBlk device(l2cpu, exit_thread_flag, interrupt_register_lock, disk_image_path);
+        VirtioBlk device(l2cpu, exit_thread_flag, interrupt_register_lock, interrupt_number, mmio_region_offset, disk_image_path);
         device.device_setup();
         device.device_loop();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
-void network_main(int l2cpu, std::mutex& interrupt_register_lock){
+void network_main(int l2cpu, std::mutex& interrupt_register_lock, int interrupt_number, uint64_t mmio_region_offset){
     while (!exit_thread_flag){
-        VirtioNet device(l2cpu, exit_thread_flag, interrupt_register_lock);
+        VirtioNet device(l2cpu, exit_thread_flag, interrupt_register_lock, interrupt_number, mmio_region_offset);
         device.device_setup();
         device.device_loop();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -95,10 +95,12 @@ int main(int argc, char **argv){
         exit(1);
     }
 
-  std::thread console_thread(console_main, l2cpu);
-  std::thread disk_thread(disk_main, l2cpu, std::ref(interrupt_register_lock), disk_image_path);
-  std::thread network_thread(network_main, l2cpu, std::ref(interrupt_register_lock));
-  console_thread.join();
-  disk_thread.join();
-  network_thread.join();
+
+  std::vector<std::thread> threads;
+  threads.emplace_back(console_main, l2cpu);
+  threads.emplace_back(disk_main, l2cpu, std::ref(interrupt_register_lock), 33, 2ULL*1024*1024, disk_image_path);
+  threads.emplace_back(network_main, l2cpu, std::ref(interrupt_register_lock), 32, 4ULL*1024*1024);
+  for (auto& thread: threads){
+    thread.join();
+  }
 }
