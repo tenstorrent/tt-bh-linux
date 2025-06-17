@@ -3,6 +3,7 @@
 
 #include <fcntl.h>
 #include <cassert>
+#include <sys/mman.h>
 #include "l2cpu.h"
 
 /*
@@ -48,6 +49,11 @@ L2CPU::L2CPU(int idx)
     starting_address = l2cpu_starting_address_mapping.at(idx);
     coordinates = l2cpu_tile_mapping.at(idx);
     memory_size = l2cpu_memory_size_mapping.at(idx);
+
+    memory = reinterpret_cast<uint8_t*>(mmap(nullptr, (2ULL<<32), PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+
+    first = std::make_unique<TlbWindow4G>(fd, coordinates.x, coordinates.y, 0x4000'0000'0000ULL, memory);
+    second = std::make_unique<TlbWindow4G>(fd, coordinates.x, coordinates.y, 0x4001'0000'0000ULL, memory+(1ULL<<32));
 }
 
 uint64_t L2CPU::get_starting_address(){
@@ -85,8 +91,14 @@ std::unique_ptr<TlbWindow2M> L2CPU::get_persistent_2M_tlb_window(uint64_t addr){
     return std::unique_ptr<TlbWindow2M>(new TlbWindow2M(fd, coordinates.x, coordinates.y, addr));
 }
 
+// Returns the starting address of the L2CPU's memory
+uint8_t* L2CPU::get_memory_ptr(){
+    return memory+(starting_address-0x4000'0000'0000ULL);
+}
+
 L2CPU::~L2CPU() noexcept
 {
+    munmap(memory, 2ULL<<32);
     close(fd);
 }
 
