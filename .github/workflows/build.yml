@@ -121,6 +121,37 @@ jobs:
         name: tt-bh-disk-image-zip
         path: tt-bh-disk-image.zip
 
+  test:
+    runs-on: tt-beta-ubuntu-2204-p150b-large-stable
+    needs: [build, generate_rootfs]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -qq unzip
+      - name: Download tt-bh-linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tt-bh-linux
+
+      - name: Download zipped Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tt-bh-linux-zip
+      
+      - name: Try booting
+        run: |
+          echo $TT_KMD_VERSION
+          echo $TT_FW_VERSION
+          echo $TT_SYSTOOLS_VERSION
+          echo $TT_SMI_VERSION
+          echo $TT_FLASH_VERSION
+          make install_all
+          make install_tt_installer
+          timeout 60s make boot
+
+  
   upload_release_artifacts:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
     needs: [build, generate_rootfs]
