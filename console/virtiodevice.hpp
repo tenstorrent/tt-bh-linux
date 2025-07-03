@@ -327,7 +327,7 @@ public:
                         */
                         uint16_t used_idx = used_q->idx;
                         used_q->ring[used_idx % queue_size].id = desc_idx_first;
-                        used_q->ring[used_idx % queue_size].len = num_bytes_written - queue_header_size;
+                        used_q->ring[used_idx % queue_size].len = num_bytes_written; // Is this the right value? Should it be device dependent
                         __sync_synchronize();
                         used_q->idx = used_idx + 1;
 
