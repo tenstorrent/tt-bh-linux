@@ -94,13 +94,13 @@ L2CPU blocks share 4GB of DRAM (see diagram)
        └───────┘        └───────┘                 └───────┘
 ```
 *(Note: This is a simplified diagram. Using memory remapping (via NoC TLBs) all
-all L2CPUs can access all DRAMs. Doing this is much slower and potentially
+L2CPUs can access all DRAMs. Doing this is much slower and potentially
 non-coherent)*
 
 Blackhole also has 120 Tensix cores (not Linux capable). P100 has an additional
-16GB of attached DRAM and P150 has an additional 20GB of attached DRAM (ie.
-28/32GB for total for P100/P150 respectfully). These additional resources aren't
-use for this demo.
+16GB of attached DRAM and P150 has an additional 20GB of attached DRAM (i.e.
+28/32GB total for P100/P150 respectively). These additional resources aren't
+used for this demo.
 
 ## Dependencies
 
