@@ -290,8 +290,8 @@ The console and network programs have examples of how to do this. The steps are:
 * Configure an inbound TLB window using the (x, y) location of the target and
 desired address; mmap the window into your application's address space
 * The address must be aligned to the window size (2MB or 4GB)
-* On an x86_64 host, you can mmap the window as write combined (WC) or unached
-(UC)
+* On an x86_64 host, you can mmap the window as write combining (WC) or
+uncacheable (UC)
 * Reads and writes to the window result in NOC access to the target
 
 ### What are the NOC0 coordinates of the L2CPU blocks?
