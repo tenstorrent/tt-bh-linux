@@ -126,7 +126,7 @@ Then install tt-smi using pipx:
 ```
 pipx install https://github.com/tenstorrent/tt-smi
 ```
-luwen is installed as a dependency of of tt-smi.
+luwen is installed as a dependency of tt-smi.
 
 The kernel module can be installed by following the instructions on the
 [tt-kmd](https://github.com/tenstorrent/tt-kmd/) repository.
