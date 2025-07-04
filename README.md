@@ -2,7 +2,7 @@
 
 # Tenstorrent Blackhole P100/P150 Linux demo
 
-This is a demo of Linux runnning on the [Tenstorrent Blackhole
+This is a demo of Linux running on the [Tenstorrent Blackhole
 P100/P150](https://tenstorrent.com/hardware/blackhole) PCIe card using the
 onboard [SiFive X280](https://www.sifive.com/cores/intelligence-x200-series)
 RISC-V cores.
@@ -53,7 +53,7 @@ make ssh
   * Blackhole has 2MB (in BAR0) and 4GB (in BAR4) varieties
   * Allows software running on the host to access arbitrary locations on the NOC
 * A similar mappable window mechanism exists in each L2CPU address space
-  * Also refered to as TLBs or NOC TLBs
+  * Also referred to as TLBs or NOC TLBs
   * 2MB and 128GB varieties
   * Allows software running on X280 to access arbitrary locations on the NOC
 * The first two L2CPU blocks each have 4GB of DRAM attached; the second two
@@ -93,11 +93,11 @@ L2CPU blocks share 4GB of DRAM (see diagram)
        │       │        │       │                 │       │
        └───────┘        └───────┘                 └───────┘
 ```
-*(Note: This is a simplied diagram. Using memory remapping (via NoC TLBs) all
+*(Note: This is a simplified diagram. Using memory remapping (via NoC TLBs) all
 all L2CPUs can access all DRAMs. Doing this is much slower and potentially
 non-coherent)*
 
-Blackhole also has 120 Tensix cores (not Linux capable). P100 has an addtional
+Blackhole also has 120 Tensix cores (not Linux capable). P100 has an additional
 16GB of attached DRAM and P150 has an additional 20GB of attached DRAM (ie.
 28/32GB for total for P100/P150 respectfully). These additional resources aren't
 use for this demo.
@@ -112,7 +112,7 @@ Interface (TT-SMI) tool to interact with the Blackhole PCIe device:
  * [tt-kmd](https://github.com/tenstorrent/tt-kmd/), a Linux kernel module that
    provides an interface for userspace such as luwen
 
-The recommmended way to install these dependancies is with
+The recommended way to install these dependencies is with
 [tt-installer](https://github.com/tenstorrent/tt-installer/).
 
 ### Manual installation
