@@ -24,7 +24,7 @@ extern "C" {
 #define MTU 1500 // MTU (Ignoring ethernet header) that is set for adapter = 1500
 #define PACKET_SIZE 1514 // MTU + ethernet header size = 1514
 
-#define PMEM_REGION_SIZE (1200ULL*1024*1024)
+#define PMEM_REGION_SIZE (32ULL*1024*1024)
 #define TTETH_SHM_REGION_OFFSET (PMEM_REGION_SIZE + (2ULL*1024*1024))
 
 #define X280_REGISTERS 0xFFFFF7FEFFF10000ULL
