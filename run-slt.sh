@@ -16,7 +16,6 @@ do
 			else
 				echo -e "\nRESULT: $RESULT"
 				pkill tt-bh-linux
-				ps -ef |grep tt-bh-linux
 				echo complete
 				break
 			fi
