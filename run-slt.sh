@@ -25,4 +25,9 @@ do
 		echo "L2CPU $L2CPU: END"
 		sleep 1
 	done
+	# TODO: change this to whatever is actually needed for production env
+	echo -n "Insert next Blackhole SoC to test..."
+	# wait 10 seconds
+	for ((i=1; i<=10; i++)); do echo -n "."; sleep 1; done
+	echo ""
 done
