@@ -27,7 +27,7 @@ const std::map<int, uint64_t> l2cpu_starting_address_mapping {
     {0, 0x4000'3000'0000ULL},
     {1, 0x4000'3000'0000ULL},
     {2, 0x4000'3000'0000ULL},
-    {3, 0x4000'b000'0000ULL},
+    {3, 0x4000'3000'0000ULL},
 };
 
 
@@ -37,8 +37,8 @@ This represents the size of the memory available to each L2CPU
 const std::map<int, uint64_t> l2cpu_memory_size_mapping {
     {0, 0x1'0000'0000ULL},
     {1, 0x1'0000'0000ULL},
-    {2, 0x8000'0000ULL},
-    {3, 0x8000'0000ULL},
+    {2, 0x1'0000'0000ULL},
+    {3, 0x1'0000'0000ULL},
 };
 
 L2CPU::L2CPU(int idx)
