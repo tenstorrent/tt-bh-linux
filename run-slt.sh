@@ -2,14 +2,19 @@
 
 while [ /bin/true ];
 do
-	for ((L2CPU=0; L2CPU<=3; L2CPU++))
+	for ((L2CPU=0; L2CPU<=1; L2CPU++))
 	do
 		LOG="l2cpu_$L2CPU.log"
 		echo "L2CPU $L2CPU: START"
+		if [ -f "$LOG" ]; then
+			mv $LOG ${LOG}.$(date +%Y%m%d_%H%M%S)
+		fi
+		cp -p ~/buildroot/output/images/rootfs.ext4 rootfs.ext4
+		md5sum rootfs.ext4
 		L2CPU=$L2CPU make boot &> $LOG &
 		for ((i=1; i<=60; i++))
 		do
-			RESULT=$(grep success $LOG)
+			RESULT=$(grep 'successful run completed' $LOG)
 			if [ "$RESULT" == "" ]; then
 				echo -n "."
 				sleep 1
