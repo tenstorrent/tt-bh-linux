@@ -2,7 +2,7 @@
 
 while [ /bin/true ];
 do
-	for ((L2CPU=0; L2CPU<=1; L2CPU++))
+	for ((L2CPU=0; L2CPU<=3; L2CPU++))
 	do
 		LOG="l2cpu_$L2CPU.log"
 		echo "L2CPU $L2CPU: START"
