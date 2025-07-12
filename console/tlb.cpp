@@ -11,8 +11,11 @@ TlbHandle::TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &conf
 {
     tenstorrent_allocate_tlb allocate_tlb{};
     allocate_tlb.in.size = size;
-    if (ioctl(fd, TENSTORRENT_IOCTL_ALLOCATE_TLB, &allocate_tlb) != 0){
-        std::cerr<<"Failed to allocate TLB";
+
+    int ret = ioctl(fd, TENSTORRENT_IOCTL_ALLOCATE_TLB, &allocate_tlb);
+
+    if (ret != 0){
+        std::cerr<<"Failed to allocate TLB. ioctl() returned: "<<ret;
         exit(1);
     }
 
