@@ -83,7 +83,7 @@ def main():
     chip = PciChip(0)
     pci_board_reset([0])
 
-    time.sleep(1) # Sleep 1s, telemetry sometimes not available immediately after reset
+    time.sleep(5) # Sleep 5s, telemetry sometimes not available immediately after reset
     telemetry = chip.get_telemetry()
     enabled_l2cpu = telemetry.enabled_l2cpu
     enabled_gddr = telemetry.enabled_gddr
