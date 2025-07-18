@@ -151,7 +151,7 @@ jobs:
       
       - name: Boot
         run: |
-          for i in {0..499}; do expect watch.expect || true; sleep 10s; pkill tt-bh-linux || true; done
+          for i in {0..499}; do expect watch.expect || true; pkill tt-bh-linux || true; done
 
   
   upload_release_artifacts:
