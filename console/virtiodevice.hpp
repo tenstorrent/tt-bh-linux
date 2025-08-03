@@ -180,7 +180,7 @@ public:
             *interrupt_status = ~VIRTIO_MMIO_INT_VRING & interrupt_status_val;
             *interrupt_ack = ~1 & interrupt_ack_val;
             std::lock_guard<std::mutex> guard(interrupt_register_lock);
-            *interrupt_register = *interrupt_register & ~(1 << (interrupt_number - 5));
+            // *interrupt_register = *interrupt_register & ~(1 << (interrupt_number - 5));
         }
     }
 
@@ -189,7 +189,7 @@ public:
         Set required bit in interrupt_register to 1 if we need to trigger an interrupt
         */
         uint32_t interrupt_status_val = *interrupt_status;
-        if (interrupt_status_val==0){
+        if (true){
             *interrupt_status = VIRTIO_MMIO_INT_VRING | interrupt_status_val;
             std::lock_guard<std::mutex> guard(interrupt_register_lock);
             /*
