@@ -298,7 +298,7 @@ public:
                     processed[i] represents the tail of the queue (our point of view)
                     avail_idx represents the head of the queue (driver's point of view)
                     */
-                    while (processed[queue_idx] != avail_idx && queue_has_data(queue_idx)) {
+                    if (processed[queue_idx] != avail_idx && queue_has_data(queue_idx)) {
                         should_i_set_interrupt=true;
                         /*
                         avail_q stores a list of descriptors for us to process
