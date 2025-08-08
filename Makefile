@@ -82,8 +82,8 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_pyth
 	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux --l2cpu $(L2CPU)
 
-boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
-	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
+# boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
+# 	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
@@ -93,26 +93,26 @@ connect: _need_hosttool _need_ttkmd
 ssh:
 	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
-SESSION = connect_all
-# Launch tmux with a 2x2 grid and connect to each l2cpu in each
-connect_all: _need_tmux
-	# Kill any existing sessions named connect_all
-	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
+# SESSION = connect_all
+# # Launch tmux with a 2x2 grid and connect to each l2cpu in each
+# connect_all: _need_tmux
+# 	# Kill any existing sessions named connect_all
+# 	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
 
-	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0' 	# pane 0
-	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1' 	# pane 1 (right)
-	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2' 	# pane 2 (bottom-left)
-	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3' 	# pane 3 (bottom-right)
-	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
+# 	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0' 	# pane 0
+# 	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1' 	# pane 1 (right)
+# 	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
+# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2' 	# pane 2 (bottom-left)
+# 	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
+# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3' 	# pane 3 (bottom-right)
+# 	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
 
-	# If we're already inside a tmux session, we need to use switch-client
-	if [ -n "$$TMUX" ]; then \
-        tmux switch-client -t "$(SESSION)"; \
-    else \
-        tmux attach-session -t "$(SESSION)"; \
-    fi
+# 	# If we're already inside a tmux session, we need to use switch-client
+# 	if [ -n "$$TMUX" ]; then \
+#         tmux switch-client -t "$(SESSION)"; \
+#     else \
+#         tmux attach-session -t "$(SESSION)"; \
+#     fi
 
 user-data.img: user-data.yaml _need_cloud_image_utils
 	cloud-localds -d raw user-data.img  user-data.yaml
