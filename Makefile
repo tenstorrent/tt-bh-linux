@@ -114,6 +114,13 @@ connect_all: _need_tmux
         tmux attach-session -t "$(SESSION)"; \
     fi
 
+user-data.img: user-data.yaml _need_cloud_image_utils
+	cloud-localds -d raw user-data.img  user-data.yaml
+
+# Boot with cloud-init image attached
+boot_cloud_init: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd user-data.img
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	./console/tt-bh-linux --l2cpu $(L2CPU) --cloud-init user-data.img
 
 #################################
 # Recipes that build things
@@ -242,7 +249,7 @@ install_qemu:
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux)
+	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux cloud-image-utils)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -314,6 +321,9 @@ _need_opensbi:
 
 _need_dtb:
 	$(call _need_file,blackhole-p100.dtb,build,build_linux)
+
+_need_cloud_image_utils:
+	$(call _need_prog,cloud-localds,install,install_hosttool_pkgs)
 
 _need_dtb_all:
 	$(call _need_file,blackhole-p100-2.dtb,build,build_dtb_all)
@@ -446,6 +456,7 @@ endef
 	install_qemu \
 	install_tool_pkgs \
 	install_tt_installer \
+	_need_cloud_image_utils \
 	_need_dtb \
 	_need_dtc \
 	_need_gcc \
