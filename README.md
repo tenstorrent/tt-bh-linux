@@ -159,11 +159,11 @@ This is automated by `make boot`.
 * Enter the Python virtual environment which contains pyluwen
 * Invoke boot.py, which:
   * resets the entire Blackhole chip
-  * copies binary data to X280's DRAM (OpenSBI, Linux, rootfs, device tree)
+  * copies binary data to X280's DRAM (OpenSBI, Linux, ~~~rootfs~~~, device tree)
   * programs X280 reset vector and resets the L2CPU tile, causing X280 to start
   executing OpenSBI
   * configures X280 L2 prefetcher with parameters recommended by SiFive
-* Invoke tt-bh-linux program (establishes console and network access)
+* Invoke tt-bh-linux program (establishes console, network and disk access)
 
 ## FAQ
 
@@ -183,16 +183,24 @@ producer/consumer fashion, with `tt-bh-linux` accepting character input from the
 user and printing character output from OpenSBI/Linux
 * The mechanism is completely polling-driven; there are no interrupts
 
-### How does the network work?
-* A [kernel driver](https://github.com/tenstorrent/linux/tree/tt-blackhole/drivers/net/ethernet/tenstorrent)
-(on the X280 side) owns TX and RX circular buffers and uses them in a manner 
-very similar to the console program
-* `tt-bh-linux` knows the location of these buffers and uses
-[libslirp](https://gitlab.freedesktop.org/slirp/libslirp) to provide a host-side
+### How does network and persistent disk work?
+* The [device tree](https://github.com/tenstorrent/linux/blob/tt-blackhole/arch/riscv/boot/dts/tenstorrent/blackhole.dtsi) has 3 `virtio,mmio` devices, 2 for disk (rootfs and cloud-init image) and 1 for networking
+* `tt-bh-linux` knows the location of the registers of these devices and implements the device side of a slightly modified version of the virtio spec to make these devices work
+* The disk functionality uses `.img` images on the host. These are mmapped into the `tt-bh-linux` program's memory and the program responds to read/write requests that come in via the virtio
 interface
-* Via slirp, the host side provides DHCP to the X280 side
-* Unlike the console, the X280 driver receives interrupts initiated by the host
-* The host program is polling-based
+  - The disk performance for any I/O pattern that makes a large number of 4K reads/writes is slow. It may appear like some git clones hang, but it should eventually complete
+  - You could consider using `/tmp/` if disk speed is of more importance than persistence
+* The network functionality is similarly implemented, with slirp being used on the host side to get responses to packets and provide DHCP, DNS and NAT
+* Both the disk and network devices use interrupts to the PLIC on the X280 to inform it of available data
+* Whereas the other side (X280 -> Host) uses polling
+
+### How to use cloud-init functionality?
+* Ubuntu and some RHEL derivatives supply riscv64 cloud images that can boot on this device
+* You'll need to use raw images here. (If needed) convert qcow2 images to raw and place them at `rootfs.ext4`
+* Each of these disk images follow a different partitioning scheme, so you'll have to identify which partition in these images is the rootfs (say it is X) and update the bootargs in the [device tree](https://github.com/tenstorrent/linux/blob/tt-blackhole/arch/riscv/boot/dts/tenstorrent/blackhole-p100.dts) to use `/dev/vdaX` instead of `/dev/vda` and rebuild the kernel
+* `user-data.yaml` has a sample cloud-init yaml file. Add your SSH keys to it
+* You can then do the first time boot with `make boot_cloud_init`. This will boot the x280 with the cloud-init image attached
+* This has to be done for the first boot, subsequent boots can use `make boot`
 
 ### What is the X280's address map?
 | Base             | Top              | PMA    | Description                 |
@@ -312,6 +320,3 @@ NOC1 coordinates of the L2CPU blocks are as follows.
 Use `tt-smi` to perform a reset: `tt-smi -r 0` resets device 0. If this is 
 unsuccessful, a power cycle is recommended.
 
-### Help! The boot script hangs at `Writing rootfs to ...`
-This is a known issue on some systems. Give it a few minutes. This will be
-fixed in a future release.
