@@ -292,7 +292,7 @@ download_rootfs: _need_wget _need_unxz
 		exit 0; \
 	fi; \
 	set -x ; \
-	$(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.3/tt-bh-disk-image.zip)
+	$(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.4/tt-bh-disk-image.zip)
 	unzip tt-bh-disk-image.zip
 	rm tt-bh-disk-image.zip
 	mv debian-riscv64.img rootfs.ext4
@@ -303,7 +303,7 @@ download_rootfs: _need_wget _need_unxz
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
 	# TODO: Test this once repo is public
-	$(call wget,tt-bh-linux.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.3/tt-bh-linux.zip)
+	$(call wget,tt-bh-linux.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.4/tt-bh-linux.zip)
 	unzip tt-bh-linux.zip
 	rm tt-bh-linux.zip
 
