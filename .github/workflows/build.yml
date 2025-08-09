@@ -159,7 +159,7 @@ jobs:
     needs: [build, generate_rootfs]
     permissions:
       contents: write
-    runs-on: tt-beta-ubuntu-2204-small
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
