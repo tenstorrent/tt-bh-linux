@@ -79,11 +79,11 @@ help:
 
 # Boot one L2CPU in Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux --l2cpu $(L2CPU)
 
-boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
-	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
+# boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
+# 	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
@@ -93,27 +93,34 @@ connect: _need_hosttool _need_ttkmd
 ssh:
 	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
-SESSION = connect_all
-# Launch tmux with a 2x2 grid and connect to each l2cpu in each
-connect_all: _need_tmux
-	# Kill any existing sessions named connect_all
-	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
+# SESSION = connect_all
+# # Launch tmux with a 2x2 grid and connect to each l2cpu in each
+# connect_all: _need_tmux
+# 	# Kill any existing sessions named connect_all
+# 	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
 
-	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0' 	# pane 0
-	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1' 	# pane 1 (right)
-	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2' 	# pane 2 (bottom-left)
-	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3' 	# pane 3 (bottom-right)
-	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
+# 	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0' 	# pane 0
+# 	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1' 	# pane 1 (right)
+# 	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
+# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2' 	# pane 2 (bottom-left)
+# 	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
+# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3' 	# pane 3 (bottom-right)
+# 	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
 
-	# If we're already inside a tmux session, we need to use switch-client
-	if [ -n "$$TMUX" ]; then \
-        tmux switch-client -t "$(SESSION)"; \
-    else \
-        tmux attach-session -t "$(SESSION)"; \
-    fi
+# 	# If we're already inside a tmux session, we need to use switch-client
+# 	if [ -n "$$TMUX" ]; then \
+#         tmux switch-client -t "$(SESSION)"; \
+#     else \
+#         tmux attach-session -t "$(SESSION)"; \
+#     fi
 
+user-data.img: user-data.yaml _need_cloud_image_utils
+	cloud-localds -d raw user-data.img  user-data.yaml
+
+# Boot with cloud-init image attached
+boot_cloud_init: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd user-data.img
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	./console/tt-bh-linux --l2cpu $(L2CPU) --cloud-init user-data.img
 
 #################################
 # Recipes that build things
@@ -242,7 +249,7 @@ install_qemu:
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux)
+	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux cloud-image-utils)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -289,6 +296,9 @@ download_rootfs: _need_wget _need_unxz
 	unzip tt-bh-disk-image.zip
 	rm tt-bh-disk-image.zip
 	mv debian-riscv64.img rootfs.ext4
+	qemu-img resize rootfs.ext4 10G
+	e2fsck -f rootfs.ext4
+	resize2fs rootfs.ext4
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
@@ -314,6 +324,9 @@ _need_opensbi:
 
 _need_dtb:
 	$(call _need_file,blackhole-p100.dtb,build,build_linux)
+
+_need_cloud_image_utils:
+	$(call _need_prog,cloud-localds,install,install_hosttool_pkgs)
 
 _need_dtb_all:
 	$(call _need_file,blackhole-p100-2.dtb,build,build_dtb_all)
@@ -446,6 +459,7 @@ endef
 	install_qemu \
 	install_tool_pkgs \
 	install_tt_installer \
+	_need_cloud_image_utils \
 	_need_dtb \
 	_need_dtc \
 	_need_gcc \

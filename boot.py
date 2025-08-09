@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument("--l2cpu", type=int, nargs="+", default=[0], help="list of L2CPUs to boot")
 
     # If using FW_PAYLOAD, set these args for rootfs and opensbi
-    parser.add_argument("--rootfs_bin", type=str, required=True, help="Path to rootfs bin file")
+    parser.add_argument("--rootfs_bin", type=str, required=False, help="Path to rootfs bin file")
     parser.add_argument("--rootfs_dst", type=str, nargs="+", required=True, help="list of Destination address for rootfs for each l2cpu")
     parser.add_argument("--opensbi_bin", type=str, required=True, help="Path to opensbi bin file")
     parser.add_argument("--opensbi_dst", type=str, nargs="+", required=True, help="list of Destination address for opensbi for each l2cpu")
@@ -83,7 +83,7 @@ def main():
     chip = PciChip(0)
     pci_board_reset([0])
 
-    time.sleep(1) # Sleep 1s, telemetry sometimes not available immediately after reset
+    time.sleep(5) # Sleep 5s, telemetry sometimes not available immediately after reset
     telemetry = chip.get_telemetry()
     enabled_l2cpu = telemetry.enabled_l2cpu
     enabled_gddr = telemetry.enabled_gddr
@@ -95,9 +95,11 @@ def main():
         l2cpu_base = 0xfffff7fefff10000
 
         opensbi_addr = int(args.opensbi_dst[idx], 16)
-        rootfs_addr = int(args.rootfs_dst[idx], 16)
         opensbi_bytes = read_bin_file(args.opensbi_bin)
-        rootfs_bytes = read_bin_file(args.rootfs_bin)
+
+        if args.rootfs_dst and args.rootfs_bin:
+            rootfs_addr = int(args.rootfs_dst[idx], 16)
+            rootfs_bytes = read_bin_file(args.rootfs_bin)
             
         if args.kernel_dst and args.kernel_bin:
             kernel_addr = int(args.kernel_dst[idx], 16)
@@ -115,8 +117,10 @@ def main():
 
         print(f"Writing OpenSBI to 0x{opensbi_addr:x}")
         chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, opensbi_addr, opensbi_bytes)
-        print(f"Writing rootfs to 0x{rootfs_addr:x}")
-        chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, rootfs_addr, rootfs_bytes)
+
+        if args.rootfs_dst and args.rootfs_bin:
+            print(f"Writing rootfs to 0x{rootfs_addr:x}")
+            chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, rootfs_addr, rootfs_bytes)
 
         if args.kernel_dst and args.kernel_bin:
             print(f"Writing Kernel to 0x{kernel_addr:x}")

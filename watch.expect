@@ -1,0 +1,38 @@
+#!/usr/bin/expect -f
+
+# Set the string you want to search for
+set target_string "login:"
+
+# Set a timeout in seconds (e.g., 600 for 10 minutes).
+# If the string isn't found within this time, the script will exit.
+# Set to -1 for no timeout.
+set timeout 600
+
+# Command to run
+set command "make boot"
+
+# Prevent expect from echoing the spawned command's output
+log_user 0
+
+# Spawn the command
+eval spawn $command
+
+# Expect the target string
+expect {
+    timeout {
+        puts stderr "Timeout: '$target_string' not found within $timeout seconds."
+        # send -raw "\x01x"
+        exit 1
+    }
+    eof {
+        puts stderr "EOF: Command finished before '$target_string' was found."
+        # send -raw "\x01x"
+        exit 2
+    }
+    -re $target_string {
+        puts "Found target string: '$target_string'"
+        puts "Sending Ctrl+A, Ctrl+X to exit."
+        send -raw "\x01x"
+        exit 0
+    }
+}
