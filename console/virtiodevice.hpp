@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <vector>
 #include <mutex> // Added for std::mutex
+#include <fstream>
+#include <iomanip>
 #include "l2cpu.h"
 
 /*
@@ -90,6 +92,8 @@ protected:
     std::vector<struct vring_avail*> avail;
     std::vector<struct vring_used*> used;
 
+    std::ofstream log_file;
+
 
 public:
     VirtioDevice(int l2cpu_idx_, std::atomic<bool>& exit_flag, std::mutex& lock, int interrupt_number_, uint64_t mmio_region_offset_)
@@ -144,6 +148,8 @@ public:
         *version = 2;
         *queue_num_max = queue_size;
         *sw_impl = 1;
+
+        log_file.open("log", std::ios_base::app);
     }
 
     /*
@@ -323,6 +329,7 @@ public:
                         which means that we need to process multiple entries
                         till we encounter an entry without that flag
                         */
+                        log_file<<processed[queue_idx]<<" "<<avail_idx<<" ";
                         while (true) {
                             l = desc_q[desc_idx % queue_size].len;
                             a = desc_q[desc_idx % queue_size].addr;
@@ -334,10 +341,13 @@ public:
                                 } else {
                                     process_queue_data(queue_idx, addr, l);
                                 }
+                                log_file<<l<<" ";
                                 num_bytes_written += l;
                                 desc_idx = desc_q[desc_idx % queue_size].next;
                             } else {
                                 process_queue_complete(queue_idx, addr, l);
+                                log_file<<l<<"\n";
+                                log_file.flush();
                                 num_bytes_written += l;
                                 break;
                             }

@@ -82,6 +82,7 @@ public:
     void process_queue_start(int queue_idx, uint8_t* addr, uint64_t len) override {
         assert(queue_idx==0);
         req = (struct virtio_blk_outhdr*)addr;
+        log_file<<req->type<<" ";
     }
 
     void process_queue_data(int queue_idx, uint8_t* addr, uint64_t len) override {
