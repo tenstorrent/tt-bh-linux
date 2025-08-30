@@ -198,7 +198,7 @@ public:
             */
             // *interrupt_register = *interrupt_register | (1 << (interrupt_number - 5));
             // *interrupt_register = (1 << (interrupt_number - 5));
-            *interrupt_register = 2;
+            *interrupt_register = interrupt_number;
         }
     }
 
