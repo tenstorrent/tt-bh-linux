@@ -5,7 +5,7 @@
 #include <sys/ioctl.h>
 #include "tlb.h"
 
-TlbHandle::TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &config, void* base)
+TlbHandle::TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &config, void* base, bool use_wc)
     : fd(fd)
     , tlb_size(size)
 {
@@ -29,7 +29,7 @@ TlbHandle::TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &conf
         exit(1);
     }
 
-    void *mem = mmap(base, size, PROT_READ | PROT_WRITE, base==nullptr? MAP_SHARED: MAP_SHARED | MAP_FIXED, fd, allocate_tlb.out.mmap_offset_uc);
+    void *mem = mmap(base, size, PROT_READ | PROT_WRITE, base==nullptr? MAP_SHARED: MAP_SHARED | MAP_FIXED, fd, use_wc? allocate_tlb.out.mmap_offset_wc: allocate_tlb.out.mmap_offset_uc);
     if (mem == MAP_FAILED) {
         tenstorrent_free_tlb free_tlb{};
         free_tlb.in.id = tlb_id;
