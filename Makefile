@@ -79,7 +79,7 @@ help:
 
 # Boot one L2CPU in Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --rootfs_bin  initramfs.cpio.gz --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux --l2cpu $(L2CPU)
 
 # boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
