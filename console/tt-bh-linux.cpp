@@ -71,7 +71,7 @@ int main(int argc, char **argv){
     }
 
   std::thread console_thread(console_main, l2cpu);
-  std::thread network_thread(network_main, l2cpu);
+  //std::thread network_thread(network_main, l2cpu);
   console_thread.join();
-  network_thread.join();
+  //network_thread.join();
 }
