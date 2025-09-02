@@ -110,7 +110,7 @@ public:
 
         // TODO: Check if (interrupt_number-5) is in valid 
         // range, and adjust which register to use accordingly
-        uint64_t interrupt_address = 0xFFFFF7FEFFF10000ULL + 0x404;
+        uint64_t interrupt_address = 0x2FF10000 + 0x404;
         interrupt_address_window = l2cpu.get_persistent_2M_tlb_window(interrupt_address);
         interrupt_register = reinterpret_cast<uint32_t*>(interrupt_address_window->get_window());
 

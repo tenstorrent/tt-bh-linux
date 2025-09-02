@@ -28,7 +28,7 @@ class TlbHandle
     size_t tlb_size;
 
 public:
-    TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &config, void* base=nullptr);
+    TlbHandle(int fd, size_t size, const tenstorrent_noc_tlb_config &config, void* base=nullptr, bool use_wc=false);
 
     uint8_t* data();
     size_t size() const;
@@ -47,7 +47,7 @@ class TlbWindow
     std::unique_ptr<TlbHandle> window;
 
 public:
-    TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr, void* base=nullptr);
+    TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr, void* base=nullptr, bool use_wc=false);
 
     void write32(uint64_t addr, uint32_t value);
 
@@ -57,7 +57,7 @@ public:
 };
 
 template <size_t WINDOW_SIZE>
-TlbWindow<WINDOW_SIZE>::TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr, void* base)
+TlbWindow<WINDOW_SIZE>::TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr, void* base, bool use_wc)
 : offset(addr & WINDOW_MASK)
 {
     tenstorrent_noc_tlb_config config{
@@ -66,7 +66,7 @@ TlbWindow<WINDOW_SIZE>::TlbWindow(int fd, uint16_t x, uint16_t y, uint64_t addr,
         .y_end = y,
     };
 
-    window = std::make_unique<TlbHandle>(fd, WINDOW_SIZE, config, base);
+    window = std::make_unique<TlbHandle>(fd, WINDOW_SIZE, config, base, use_wc);
 }
 
 
