@@ -67,7 +67,7 @@ def reset_x280(chip, l2cpu_indices):
         l2cpu_reset_val |= 1 << (l2cpu_index + 4)
     chip.axi_write32(reset_unit_base + 0x14, l2cpu_reset_val) # L2CPU_RESET
     chip.axi_read32(reset_unit_base + 0x14) # L2CPU_RESET
-    clock.set_l2cpu_pll(chip, 1750)
+    # clock.set_l2cpu_pll(chip, 1750)
 
 def read_bin_file(file_path):
     with open(file_path, 'rb') as file:

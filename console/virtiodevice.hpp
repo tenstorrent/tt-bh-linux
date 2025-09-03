@@ -371,7 +371,9 @@ public:
                     }
                 // }
             }
-            usleep(1);
+            for(int t=0;t<200;t++){
+              asm("pause");
+            }
         }
     }
     virtual ~VirtioDevice() = default;
