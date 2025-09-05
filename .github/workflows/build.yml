@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    runs-on: tt-beta-ubuntu-2204-xlarge
+    runs-on: tt-ubuntu-2204-xlarge-stable
     env:
       CI_JOB_ID: ${{ github.run_id }}
 
@@ -125,7 +125,7 @@ jobs:
         path: tt-bh-disk-image.zip
 
   test:
-    runs-on: tt-beta-ubuntu-2204-p150b-large-stable
+    runs-on: tt-ubuntu-2204-p150b-stable
     needs: [build, generate_rootfs]
 
     steps:
