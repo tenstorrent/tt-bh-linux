@@ -188,8 +188,6 @@ user and printing character output from OpenSBI/Linux
 * `tt-bh-linux` knows the location of the registers of these devices and implements the device side of a slightly modified version of the virtio spec to make these devices work
 * The disk functionality uses `.img` images on the host. These are mmapped into the `tt-bh-linux` program's memory and the program responds to read/write requests that come in via the virtio
 interface
-  - The disk performance for any I/O pattern that makes a large number of 4K reads/writes is slow. It may appear like some git clones hang, but it should eventually complete
-  - You could consider using `/tmp/` if disk speed is of more importance than persistence
 * The network functionality is similarly implemented, with slirp being used on the host side to get responses to packets and provide DHCP, DNS and NAT
 * Both the disk and network devices use interrupts to the PLIC on the X280 to inform it of available data
 * Whereas the other side (X280 -> Host) uses polling
