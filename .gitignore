@@ -1,4 +1,4 @@
-/blackhole-p100*.dtb
+/blackhole-a0-card*.dtb
 /Image
 /rootfs.ext4
 /fw_jump.bin
