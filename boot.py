@@ -8,6 +8,7 @@ from pyluwen import PciChip
 from tt_smi.tt_smi_backend import pci_board_reset
 import clock
 import time
+import libfdt
 
 l2cpu_tile_mapping = {
     0: (8, 3),
@@ -108,6 +109,21 @@ def main():
         if args.dtb_bin and args.dtb_dst:
             dtb_addr = int(args.dtb_dst[idx], 16)
             dtb_bytes = read_bin_file(args.dtb_bin[idx])
+
+        
+        fdt = libfdt.Fdt(dtb_bytes)
+        # Add some free space to the dtb
+        fdt.resize(len(dtb_bytes) + 1000)
+        chosen_offset = fdt.path_offset("/chosen", libfdt.QUIET_NOTFOUND)
+        if chosen_offset < 0:
+            # Device tree doesn't have a chosen node, add chosen node and bootarga value
+            chosen_offset = fdt.add_subnode(0, "chosen")
+
+        bootargs = "rw console=hvc0 earlycon=sbi root=/dev/vda"
+        fdt.setprop(chosen_offset, "bootargs", bytes(bootargs, encoding="utf-8") + b'\0')
+        
+        fdt.pack()
+        dtb_bytes = fdt._fdt
 
 
         # Enable the whole cache when using DRAM
