@@ -30,7 +30,10 @@ def parse_args():
     parser.add_argument("--l2cpu", type=int, nargs="+", default=[0], help="list of L2CPUs to boot")
 
     # If using FW_PAYLOAD, set these args for rootfs and opensbi
-    parser.add_argument("--rootfs_bin", type=str, required=False, help="Path to rootfs bin file")
+    parser.add_argument("--boot_device", type=str, required=False, default="vda", help="Options: vda, vdaX or initramfs")
+
+    # Only used for initramfs
+    parser.add_argument("--rootfs_bin", type=str, required=False, help="Path to initramfs")
     parser.add_argument("--rootfs_dst", type=str, nargs="+", required=True, help="list of Destination address for rootfs for each l2cpu")
     parser.add_argument("--opensbi_bin", type=str, required=True, help="Path to opensbi bin file")
     parser.add_argument("--opensbi_dst", type=str, nargs="+", required=True, help="list of Destination address for opensbi for each l2cpu")
@@ -116,12 +119,19 @@ def main():
         fdt.resize(len(dtb_bytes) + 1000)
         chosen_offset = fdt.path_offset("/chosen", libfdt.QUIET_NOTFOUND)
         if chosen_offset < 0:
-            # Device tree doesn't have a chosen node, add chosen node and bootarga value
+            # Device tree doesn't have a chosen node, add chosen node and bootargs value
             chosen_offset = fdt.add_subnode(0, "chosen")
 
-        bootargs = "rw console=hvc0 earlycon=sbi root=/dev/vda"
+        bootargs = "rw console=hvc0 earlycon=sbi"
+        if args.boot_device[:len("vda")] == "vda":
+            bootargs += f" root=/dev/{args.boot_device}"
+        elif args.boot_device == "initramfs":
+            bootargs += f" initrd={args.rootfs_dst[idx]},{len(rootfs_bytes)}"
+        else:
+            print("Unsupported rootfs type")
+            exit(1)
         fdt.setprop(chosen_offset, "bootargs", bytes(bootargs, encoding="utf-8") + b'\0')
-        
+
         fdt.pack()
         dtb_bytes = fdt._fdt
 
