@@ -195,10 +195,31 @@ interface
 ### How to use cloud-init functionality?
 * Ubuntu and some RHEL derivatives supply riscv64 cloud images that can boot on this device
 * You'll need to use raw images here. (If needed) convert qcow2 images to raw and place them at `rootfs.ext4`
-* Each of these disk images follow a different partitioning scheme, so you'll have to identify which partition in these images is the rootfs (say it is X) and update the bootargs in the [device tree](https://github.com/tenstorrent/linux/blob/tt-blackhole/arch/riscv/boot/dts/tenstorrent/blackhole-p100.dts) to use `/dev/vdaX` instead of `/dev/vda` and rebuild the kernel
+- Each of these disk images follow a different partitioning scheme, so you'll
+  have to identify which partition in these images is the rootfs (say it is X)
+  and add `--boot_device vdaX` to the `python boot.py` command in the
+  Makefile's `boot_cloud_init` target.
 * `user-data.yaml` has a sample cloud-init yaml file. Add your SSH keys to it
 * You can then do the first time boot with `make boot_cloud_init`. This will boot the x280 with the cloud-init image attached
 * This has to be done for the first boot, subsequent boots can use `make boot`
+
+### Booting an Initramfs
+* You can use the `boot_initramfs` make target to load a cpio formatted initramfs into memory and run the init command in this
+```
+INITRAMFS=../hello_world_init.cpio make boot_initramfs
+.
+.
+[    0.000000] Booting Linux on hartid 3
+[    0.000000] Linux version 6.15.0-tt-blackhole-asrinivasan-00019-g58a8f2df0943-dirty (asrinivasan@yyzo-bh-22) (riscv64-linux-gnu-gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GN
+U ld (GNU Binutils for Ubuntu) 2.38) #180 SMP Wed Sep 10 22:55:21 EDT 2025
+[    0.000000] Machine model: Tenstorrent Blackhole P100
+.
+.
+[    0.284552] Run /init as init process
+Halt and catch fire!
+[    0.289075] reboot: System halted
+```
+* This can be combined with `expect` to boot the X280, run a test and check for a particular result. See [this](watch.expect) and [this](.github/workflows/build.yml#L154) for examples on how to do this
 
 ### What is the X280's address map?
 | Base             | Top              | PMA    | Description                 |
