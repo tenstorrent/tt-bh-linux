@@ -184,27 +184,40 @@ user and printing character output from OpenSBI/Linux
 * The mechanism is completely polling-driven; there are no interrupts
 
 ### How does network and persistent disk work?
-* The [device tree](https://github.com/tenstorrent/linux/blob/tt-blackhole/arch/riscv/boot/dts/tenstorrent/blackhole.dtsi) has 3 `virtio,mmio` devices, 2 for disk (rootfs and cloud-init image) and 1 for networking
-* `tt-bh-linux` knows the location of the registers of these devices and implements the device side of a slightly modified version of the virtio spec to make these devices work
-* The disk functionality uses `.img` images on the host. These are mmapped into the `tt-bh-linux` program's memory and the program responds to read/write requests that come in via the virtio
-interface
-* The network functionality is similarly implemented, with slirp being used on the host side to get responses to packets and provide DHCP, DNS and NAT
-* Both the disk and network devices use interrupts to the PLIC on the X280 to inform it of available data
-* Whereas the other side (X280 -> Host) uses polling
+- The
+  [device tree](https://github.com/tenstorrent/linux/blob/tt-blackhole/arch/riscv/boot/dts/tenstorrent/blackhole.dtsi)
+  has 3 `virtio,mmio` devices, 2 for disk (rootfs and cloud-init image) and 1
+  for networking
+- `tt-bh-linux` knows the location of the registers of these devices and
+  implements the device side of a slightly modified version of the virtio spec
+  to make these devices work
+- The disk functionality uses `.img` images on the host. These are mmapped into
+  the `tt-bh-linux` program's memory and the program responds to read/write
+  requests that come in via the virtio interface
+- The network functionality is similarly implemented, with slirp being used on
+  the host side to get responses to packets and provide DHCP, DNS and NAT
+- Both the disk and network devices use interrupts to the PLIC on the X280 to
+  inform it of available data
+- Whereas the other side (X280 -> Host) uses polling
 
 ### How to use cloud-init functionality?
-* Ubuntu and some RHEL derivatives supply riscv64 cloud images that can boot on this device
-* You'll need to use raw images here. (If needed) convert qcow2 images to raw and place them at `rootfs.ext4`
+- Ubuntu and some RHEL derivatives supply riscv64 cloud images that can boot on
+  this device
+- You'll need to use raw images here. (If needed) convert qcow2 images to raw
+  and place them at `rootfs.ext4`
 - Each of these disk images follow a different partitioning scheme, so you'll
   have to identify which partition in these images is the rootfs (say it is X)
   and add `--boot_device vdaX` to the `python boot.py` command in the
   Makefile's `boot_cloud_init` target.
-* `user-data.yaml` has a sample cloud-init yaml file. Add your SSH keys to it
-* You can then do the first time boot with `make boot_cloud_init`. This will boot the x280 with the cloud-init image attached
-* This has to be done for the first boot, subsequent boots can use `make boot`
+- `user-data.yaml` has a sample cloud-init yaml file. Add your SSH keys to it
+- You can then do the first time boot with `make boot_cloud_init`. This will
+  boot the x280 with the cloud-init image attached
+- This has to be done for the first boot, subsequent boots can use `make boot`
 
 ### Booting an Initramfs
-* You can use the `boot_initramfs` make target to load a cpio formatted initramfs into memory and run the init command in this
+
+- You can use the `boot_initramfs` make target to load a cpio formatted
+  initramfs into memory and run the init command in this
 ```
 INITRAMFS=../hello_world_init.cpio make boot_initramfs
 .
@@ -219,7 +232,9 @@ U ld (GNU Binutils for Ubuntu) 2.38) #180 SMP Wed Sep 10 22:55:21 EDT 2025
 Halt and catch fire!
 [    0.289075] reboot: System halted
 ```
-* This can be combined with `expect` to boot the X280, run a test and check for a particular result. See [this](watch.expect) and [this](.github/workflows/build.yml#L154) for examples on how to do this
+- This can be combined with `expect` to boot the X280, run a test and check for
+  a particular result. See [this](watch.expect) and
+  [this](.github/workflows/build.yml#L154) for examples on how to do this
 
 ### What is the X280's address map?
 | Base             | Top              | PMA    | Description                 |
