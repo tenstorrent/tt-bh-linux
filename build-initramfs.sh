@@ -30,7 +30,7 @@ set -e
 
 info "Creating minimal riscv64 Debian system"
 mkdir -p $CACHE
-PACKAGES=util-linux,mount,coreutils,dash,fio
+PACKAGES=util-linux,mount,coreutils,dash,stress-ng
 debootstrap --cache-dir $CACHE --include $PACKAGES --arch riscv64 --variant=minbase trixie $DEBIAN_ROOT http://deb.debian.org/debian
 
 info "Creating initramfs directory structure"
@@ -41,14 +41,17 @@ info "Creating init script"
 cat > $INITRAMFS_DIR/init << 'EOF'
 #!/bin/sh
 mount /dev/vda /newroot
-fio --filename=/newroot/home/debian/test --size=1GB --direct=1 --rw=randrw --bs=4k --ioengine=libaio --iodepth=256 --runtime=120 --numjobs=4 --time_based --group_reporting --name=iops-test-job --eta-newline=1
+cd /newroot/home/debian
+rm -rf tmp*
+stress-ng --abort --ignite-cpu --timestamp --verbose --timeout 0 --copy-file 2 --dentry 2
 EOF
 chmod +x $INITRAMFS_DIR/init
 
 info "Copying riscv64 binaries from Debian system"
 cp $DEBIAN_ROOT/bin/dash $INITRAMFS_DIR/bin/sh
 cp $DEBIAN_ROOT/bin/mount $INITRAMFS_DIR/bin/
-cp $DEBIAN_ROOT/bin/fio $INITRAMFS_DIR/bin/
+cp $DEBIAN_ROOT/bin/stress-ng $INITRAMFS_DIR/bin/
+cp $DEBIAN_ROOT/bin/rm $INITRAMFS_DIR/bin/
 
 info "Copying required riscv64 libraries"
 for binary in $INITRAMFS_DIR/bin/* $INITRAMFS_DIR/sbin/*; do
