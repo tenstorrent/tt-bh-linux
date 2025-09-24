@@ -30,7 +30,7 @@ set -e
 
 info "Creating minimal riscv64 Debian system"
 mkdir -p $CACHE
-PACKAGES=util-linux,mount,coreutils,dash
+PACKAGES=util-linux,mount,coreutils,dash,fio
 debootstrap --cache-dir $CACHE --include $PACKAGES --arch riscv64 --variant=minbase trixie $DEBIAN_ROOT http://deb.debian.org/debian
 
 info "Creating initramfs directory structure"
@@ -40,29 +40,15 @@ mkdir -p $INITRAMFS_DIR/{bin,sbin,etc,proc,sys,dev,tmp,mnt,newroot,lib,lib64}
 info "Creating init script"
 cat > $INITRAMFS_DIR/init << 'EOF'
 #!/bin/sh
-/bin/mount -t proc proc /proc
-/bin/mount -t sysfs sysfs /sys
-/bin/mount -t devtmpfs devtmpfs /dev 2>/dev/null || mknod /dev/console c 5 1
-
-echo "Blackhole P100 initramfs"
-
-# Try to mount root filesystem
-if [ -b /dev/vda ] && /bin/mount /dev/vda /newroot; then
-    echo "Mounted /dev/vda, switching root..."
-    /bin/umount /proc /sys
-    exec /sbin/switch_root /newroot /sbin/init
-fi
-
-echo "Failed to mount root, dropping to shell"
-exec /bin/sh
+mount /dev/vda /newroot
+fio --filename=/newroot/home/debian/test --size=1GB --direct=1 --rw=randrw --bs=4k --ioengine=libaio --iodepth=256 --runtime=120 --numjobs=4 --time_based --group_reporting --name=iops-test-job --eta-newline=1
 EOF
 chmod +x $INITRAMFS_DIR/init
 
 info "Copying riscv64 binaries from Debian system"
 cp $DEBIAN_ROOT/bin/dash $INITRAMFS_DIR/bin/sh
 cp $DEBIAN_ROOT/bin/mount $INITRAMFS_DIR/bin/
-cp $DEBIAN_ROOT/bin/umount $INITRAMFS_DIR/bin/
-cp $DEBIAN_ROOT/sbin/switch_root $INITRAMFS_DIR/sbin/
+cp $DEBIAN_ROOT/bin/fio $INITRAMFS_DIR/bin/
 
 info "Copying required riscv64 libraries"
 for binary in $INITRAMFS_DIR/bin/* $INITRAMFS_DIR/sbin/*; do
