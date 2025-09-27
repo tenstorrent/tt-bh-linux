@@ -14,7 +14,8 @@ PLL_CNTL_5 = 0x14
 solutions = {
     # freq: [ fbdiv, [postdiv0, postdiv1, postdiv2, [postdiv]3] ]
     200: [128, [15, 15, 15, 15]],
-    1750: [140, [1, 1, 1, 1]] 
+    1750: [140, [1, 1, 1, 1]],
+    15: [120, [99, 99, 99, 99]],
 }
 
 class PLLCNTL5(ctypes.LittleEndianStructure):
