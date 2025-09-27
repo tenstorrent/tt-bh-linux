@@ -171,15 +171,26 @@ public:
 
     inline void ack_interrupt(){
         /*
+        What we're supposed to do is this:
         If driver has acknlowedged VIRTIO_MMIO_INT_VRING interrupt by setting bit 0 in interrupt_ack register
         We unset the interrupt by writing 0 to the correct bit in interrupt_register
+
+        What we actually do is: nothing.
+        Plic driver in X280 Acks interrupt
+        We also skip unsetting the bit in interrupt_status as this isn't needed
+        (even though the spec says so, the kernel implementation doesn't rely on it being unset)
+        and also happens too fast on the host end.
+        Because it happens too fast, the virtio_mmio device's interrupt handler
+        (https://elixir.bootlin.com/linux/v6.14.6/source/drivers/virtio/virtio_mmio.c#L317)
+        thinks the interrupt was for not of type VIRTIO_MMIO_INT_VRING and doesn't check the virtqueue
+        for processed descriptors
         */
-        uint32_t interrupt_status_val = *interrupt_status;
+        // uint32_t interrupt_status_val = *interrupt_status;
         uint32_t interrupt_ack_val = *interrupt_ack;
         if ((interrupt_ack_val & 1)==1) {
-            *interrupt_status = ~VIRTIO_MMIO_INT_VRING & interrupt_status_val;
-            *interrupt_ack = ~1 & interrupt_ack_val;
-            std::lock_guard<std::mutex> guard(interrupt_register_lock);
+            // *interrupt_status = ~VIRTIO_MMIO_INT_VRING & interrupt_status_val;
+            // *interrupt_ack = ~1 & interrupt_ack_val;
+            // std::lock_guard<std::mutex> guard(interrupt_register_lock);
             // *interrupt_register = *interrupt_register & ~(1 << (interrupt_number - 5));
         }
     }
