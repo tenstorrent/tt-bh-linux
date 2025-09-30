@@ -152,7 +152,8 @@ build_linux: _need_riscv64_toolchain _need_gcc _need_dtc _need_linux_tree
 	cp blackhole_defconfig linux/arch/riscv/configs/
 	$(call _linux_configure,blackhole_defconfig)
 	$(call _linux_set_localversion,blackhole_defconfig)
-	$(MAKE) -C linux -j $(nproc) $(quiet_make)
+	$(MAKE) -C linux W=1 -j $(nproc) $(quiet_make)
+	$(MAKE) -C linux W=1 -j $(nproc) $(quiet_make) dtbs_check
 	ln -f linux/arch/riscv/boot/Image Image
 	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-a0-card.dtb blackhole-a0-card.dtb
 
