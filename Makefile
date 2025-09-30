@@ -79,11 +79,11 @@ help:
 
 # Boot one L2CPU in Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-a0-card.dtb --dtb_dst 0x400030100000
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux --l2cpu $(L2CPU)
 
 boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd
-	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-a0-card.dtb blackhole-a0-card.dtb blackhole-a0-card-2.dtb blackhole-a0-card-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
+	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-card.dtb blackhole-card.dtb blackhole-card-2.dtb blackhole-card-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
@@ -155,7 +155,7 @@ build_linux: _need_riscv64_toolchain _need_gcc _need_dtc _need_linux_tree
 	$(MAKE) -C linux W=1 -j $(nproc) $(quiet_make)
 	$(MAKE) -C linux W=1 -j $(nproc) $(quiet_make) dtbs_check
 	ln -f linux/arch/riscv/boot/Image Image
-	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-a0-card.dtb blackhole-a0-card.dtb
+	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-card.dtb blackhole-card.dtb
 
 # Build opensbi
 build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
@@ -177,8 +177,8 @@ build_all: build_linux build_opensbi build_hosttool
 	@echo "Build complete! Now run 'make boot' to run Linux"
 
 build_dtb_all:
-	dtc misc/blackhole-a0-card-2.dts > blackhole-a0-card-2.dtb
-	dtc misc/blackhole-a0-card-3.dts > blackhole-a0-card-3.dtb
+	dtc misc/blackhole-card-2.dts > blackhole-card-2.dtb
+	dtc misc/blackhole-card-3.dts > blackhole-card-3.dtb
 
 #################################
 # Recipes that clean things
@@ -188,7 +188,7 @@ RV64_TARGETS += clean_linux clean_opensbi
 # Clean linux tree and remove binary
 clean_linux:
 	if [ -d linux ]; then $(MAKE) -C linux -j $(nproc) $(quiet_make) clean; fi
-	rm -f Image blackhole-a0-card.dtb
+	rm -f Image blackhole-card.dtb
 
 # Clean opensbi tree and remove binary
 clean_opensbi:
@@ -315,11 +315,11 @@ _need_opensbi:
 	$(call _need_file,fw_jump.bin,build,build_opensbi)
 
 _need_dtb:
-	$(call _need_file,blackhole-a0-card.dtb,build,build_linux)
+	$(call _need_file,blackhole-card.dtb,build,build_linux)
 
 _need_dtb_all:
-	$(call _need_file,blackhole-a0-card-2.dtb,build,build_dtb_all)
-	$(call _need_file,blackhole-a0-card-3.dtb,build,build_dtb_all)
+	$(call _need_file,blackhole-card-2.dtb,build,build_dtb_all)
+	$(call _need_file,blackhole-card-3.dtb,build,build_dtb_all)
 
 _need_rootfs:
 	$(call _need_file,$(DISK_IMAGE),build,download_rootfs)
