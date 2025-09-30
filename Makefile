@@ -202,7 +202,7 @@ clean_hosttool:
 
 # Clean cloned trees
 clean_clones:
-	rm -rf linux opensbi
+	echo SKIP rm -rf linux opensbi
 
 # Clean builds and downloads
 clean_all: clean_builds clean_downloads clean_clones
