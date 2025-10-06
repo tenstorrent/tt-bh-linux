@@ -265,7 +265,7 @@ clone_linux: _need_git
 
 # Clone the Tenstorrent opensbi source tree
 clone_opensbi: _need_git
-	$(call _clone,https://github.com/tenstorrent/opensbi,opensbi,tt-blackhole)
+	$(call _clone,https://github.com/tenstorrent/opensbi,opensbi,tt-blackhole-master)
 
 # Clone linux and opensbi trees
 clone_all: clone_linux clone_opensbi
