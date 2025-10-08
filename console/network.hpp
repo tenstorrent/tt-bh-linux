@@ -52,6 +52,7 @@ public:
     struct vdeslirp *myslirp = nullptr;
     int slirp_fd = -1;
     uint8_t buffer[PACKET_SIZE];
+    bool header_processed;
 
     VirtioNet(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock, int interrupt_number_, uint64_t mmio_region_offset_)
         : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, interrupt_number_, mmio_region_offset_) {
@@ -72,11 +73,19 @@ public:
 
         *device_id = VIRTIO_ID_NET;
         queue_header_size = sizeof(struct virtio_net_hdr_mrg_rxbuf);
+        header_processed = false;
       }
 
     void process_queue_start(int queue_idx, uint8_t* addr, uint64_t len) override {
-        // Do nothing here
-    }
+        header_processed = true;
+        if (queue_idx==0){
+            struct virtio_net_hdr_mrg_rxbuf* hdr = reinterpret_cast<struct virtio_net_hdr_mrg_rxbuf*>(addr);
+            hdr->hdr.flags = 0;
+            hdr->num_buffers = 1;
+            hdr->hdr.gso_type = 0;
+            hdr->hdr.gso_size = 0;
+          }
+      }
 
     void process_queue_data(int queue_idx, uint8_t* addr, uint64_t len) override {
         // Do nothing here
@@ -87,24 +96,23 @@ public:
       For the network device, we seem to always just get one descriptor of size 1514+sizeof(struct virtio_net_hdr_mrg_rxbuf)
       So we process that in this function cause the last descriptor doesn't have the next flag set
       */
+      if (!header_processed){
+        process_queue_start(queue_idx, addr, len);
+        addr += queue_header_size;
+      }
       if (queue_idx==0){
-          struct virtio_net_hdr_mrg_rxbuf* hdr = reinterpret_cast<struct virtio_net_hdr_mrg_rxbuf*>(addr);
-          hdr->hdr.flags = 0;
-          hdr->num_buffers = 1;
-          hdr->hdr.gso_type = 0;
-          hdr->hdr.gso_size = 0;
           ssize_t pktlen = vdeslirp_recv(myslirp, buffer, PACKET_SIZE);
           if (pktlen > 0) {
-              memcpy(addr + sizeof(struct virtio_net_hdr_mrg_rxbuf), buffer, pktlen);
+              memcpy(addr, buffer, pktlen);
           }
         } else if(queue_idx==1) {
-            uint64_t payload_len = len - sizeof(struct virtio_net_hdr_mrg_rxbuf);
-            memcpy(buffer, addr + sizeof(struct virtio_net_hdr_mrg_rxbuf), payload_len);
-            int ret = vdeslirp_send(myslirp, buffer, payload_len);
+            memcpy(buffer, addr, len);
+            int ret = vdeslirp_send(myslirp, buffer, len);
             if (ret < 0) {
                 printf("vdeslirp_send failed: %d\n", ret);
             }
         }
+        header_processed = false;
     }
 
     inline bool queue_has_data(int queue_idx){
