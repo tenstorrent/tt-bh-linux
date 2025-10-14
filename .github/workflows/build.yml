@@ -194,7 +194,7 @@ jobs:
 
     - name: Upload packages to release
       run: |
-        gh release upload ${{ github.ref_name }} Image fw_jump.bin blackhole-p100.dtb \
+        gh release upload ${{ github.ref_name }} Image fw_jump.bin blackhole-card.dtb \
           tt-bh-linux.zip tt-bh-disk-image.zip
       env:
         GITHUB_TOKEN: ${{ github.token }}
