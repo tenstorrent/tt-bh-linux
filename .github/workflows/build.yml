@@ -69,14 +69,14 @@ jobs:
         echo -e "\n## Artifacts included:" >> release-notes.md
         echo "- Image" >> release-notes.md
         echo "- fw_jump.bin" >> release-notes.md
-        echo "- blackhole-p100.dtb" >> release-notes.md
-        echo "- tt-bh-linux.zip (Image, fw_jump.bin, blackhole-p100.dtb)" >> release-notes.md
+        echo "- blackhole-card.dtb" >> release-notes.md
+        echo "- tt-bh-linux.zip (Image, fw_jump.bin, blackhole-card.dtb)" >> release-notes.md
         echo "- tt-bh-disk-image.zip (debian-riscv64.img)" >> release-notes.md
         echo -e "\nBuilt by CI run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> release-notes.md
 
     - name: Zip Linux build artifacts
       run: |
-        zip -j tt-bh-linux.zip Image fw_jump.bin blackhole-p100.dtb
+        zip -j tt-bh-linux.zip Image fw_jump.bin blackhole-card.dtb
 
     - name: Archive artifacts
       uses: actions/upload-artifact@v4
@@ -85,7 +85,7 @@ jobs:
         path: |
           Image
           fw_jump.bin
-          blackhole-p100.dtb
+          blackhole-card.dtb
 
     - name: Archive zipped Linux artifacts
       uses: actions/upload-artifact@v4

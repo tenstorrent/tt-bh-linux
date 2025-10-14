@@ -79,12 +79,12 @@ help:
 
 # Boot one L2CPU in Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux --l2cpu $(L2CPU)
 
 # Boot one L2CPU in Blackhole RISC-V CPU into an initramfs specified by $(INITRAMFS)
 boot_initramfs: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
 	./console/tt-bh-linux --l2cpu $(L2CPU)
 
 # boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
@@ -124,7 +124,7 @@ user-data.img: user-data.yaml _need_cloud_image_utils
 
 # Boot with cloud-init image attached
 boot_cloud_init: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt user-data.img
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-p100.dtb --dtb_dst 0x400030100000
+	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
 	./console/tt-bh-linux --l2cpu $(L2CPU) --cloud-init user-data.img
 
 #################################
@@ -165,7 +165,7 @@ build_linux: _need_riscv64_toolchain _need_gcc _need_dtc _need_linux_tree
 	$(call _linux_set_localversion,blackhole_defconfig)
 	$(MAKE) -C linux -j $(nproc) $(quiet_make)
 	ln -f linux/arch/riscv/boot/Image Image
-	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-p100.dtb blackhole-p100.dtb
+	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-card.dtb blackhole-card.dtb
 
 # Build opensbi
 build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
@@ -198,7 +198,7 @@ RV64_TARGETS += clean_linux clean_opensbi
 # Clean linux tree and remove binary
 clean_linux:
 	if [ -d linux ]; then $(MAKE) -C linux -j $(nproc) $(quiet_make) clean; fi
-	rm -f Image blackhole-p100.dtb
+	rm -f Image blackhole-card.dtb
 
 # Clean opensbi tree and remove binary
 clean_opensbi:
@@ -331,7 +331,7 @@ _need_opensbi:
 	$(call _need_file,fw_jump.bin,build,build_opensbi)
 
 _need_dtb:
-	$(call _need_file,blackhole-p100.dtb,build,build_linux)
+	$(call _need_file,blackhole-card.dtb,build,build_linux)
 
 _need_cloud_image_utils:
 	$(call _need_prog,cloud-localds,install,install_hosttool_pkgs)
