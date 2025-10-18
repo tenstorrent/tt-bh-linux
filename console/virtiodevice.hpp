@@ -9,6 +9,9 @@
 #include <mutex> // Added for std::mutex
 #include "l2cpu.h"
 
+#include "virtio_msg.h"
+#include "spsc_queue.h"
+
 /*
 Virtual Base Class that implements most of the device-agnostic functionality needed
 to emulate a the device side of a virtio-mmio device added to the L2CPU's device tree
@@ -54,30 +57,6 @@ protected:
     // Max size of virtqueue, probably should make this as large as possible, 16384 maybe?
     uint16_t queue_size = 16384;
 
-    // Pointers to registers within virtio-mmio device's reg region
-    uint32_t *magic_value; // VIRTIO_MMIO_MAGIC_VALUE
-    uint32_t *version; // VIRTIO_MMIO_VERSION
-    uint32_t *device_id; // VIRTIO_MMIO_DEVICE_ID
-    uint32_t *device_features; // VIRTIO_MMIO_DEVICE_FEATURES
-    uint32_t *device_features_sel; // VIRTIO_MMIO_DEVICE_FEATURES_SEL
-    uint32_t *driver_features; // VIRTIO_MMIO_DRIVER_FEATURES
-    uint32_t *driver_features_sel; // VIRTIO_MMIO_DRIVER_FEATURES_SEL
-    uint32_t *queue_num_max; // VIRTIO_MMIO_QUEUE_NUM_MAX
-    uint32_t *queue_ready; // VIRTIO_MMIO_QUEUE_READY
-    uint32_t *queue_notify; // VIRTIO_MMIO_QUEUE_NOTIFY
-    uint32_t *interrupt_status; // VIRTIO_MMIO_INTERRUPT_STATUS
-    uint32_t *interrupt_ack; // VIRTIO_MMIO_INTERRUPT_ACK
-    uint32_t *status; // VIRTIO_MMIO_STATUS
-    uint32_t *queue_desc_low; // VIRTIO_MMIO_QUEUE_DESC_LOW
-    uint32_t *queue_desc_high; // VIRTIO_MMIO_QUEUE_DESC_HIGH
-    uint32_t *queue_avail_low; // VIRTIO_MMIO_QUEUE_AVAIL_LOW
-    uint32_t *queue_avail_high; // VIRTIO_MMIO_QUEUE_AVAIL_HIGH
-    uint32_t *queue_used_low; // VIRTIO_MMIO_QUEUE_USED_LOW
-    uint32_t *queue_used_high; // VIRTIO_MMIO_QUEUE_USED_HIGH
-    uint32_t *queue_select; // VIRTIO_MMIO_QUEUE_SEL
-    uint32_t *sw_impl; // VIRTIO_MMIO_SW_IMPL
-    uint32_t *sel_generation; // VIRTIO_MMIO_SEL_GENERATION
-
     uint32_t device_features_list[2] = {0, 0}; // Default, set in subclass constructor or setup
     uint32_t driver_features_list[2] = {0, 0}; // Default, set in subclass constructor or setup
 
@@ -90,6 +69,7 @@ protected:
     std::vector<struct vring_avail*> avail;
     std::vector<struct vring_used*> used;
 
+    spsc_queue drv2dev, dev2drv;
 
 public:
     VirtioDevice(int l2cpu_idx_, std::atomic<bool>& exit_flag, std::mutex& lock, int interrupt_number_, uint64_t mmio_region_offset_)
@@ -114,36 +94,9 @@ public:
         interrupt_address_window = l2cpu.get_persistent_2M_tlb_window(interrupt_address);
         interrupt_register = reinterpret_cast<uint32_t*>(interrupt_address_window->get_window());
 
-        // 0->0x100 for generic virtio-mmio config, 0x100 onwards for device specific config
-        // Should probably check if 0x100 is enough for device specific config
-        memset(mmio_base, 0, 0x200);
-        magic_value = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_MAGIC_VALUE);
-        version = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_VERSION);
-        device_id = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_DEVICE_ID);
-        device_features = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_DEVICE_FEATURES);
-        device_features_sel = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_DEVICE_FEATURES_SEL);
-        driver_features = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_DRIVER_FEATURES);
-        driver_features_sel = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_DRIVER_FEATURES_SEL);
-        queue_num_max = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_NUM_MAX);
-        queue_ready = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_READY);
-        queue_notify = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_NOTIFY);
-        interrupt_status = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_INTERRUPT_STATUS);
-        interrupt_ack = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_INTERRUPT_ACK);
-        status = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_STATUS);
-        queue_desc_low = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_DESC_LOW);
-        queue_desc_high = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_DESC_HIGH);
-        queue_avail_low = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_AVAIL_LOW);
-        queue_avail_high = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_AVAIL_HIGH);
-        queue_used_low = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_USED_LOW);
-        queue_used_high = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_USED_HIGH);
-        queue_select = reinterpret_cast<uint32_t *>(mmio_base + VIRTIO_MMIO_QUEUE_SEL);
-        sw_impl = reinterpret_cast<uint32_t*>(mmio_base + 0x018);
-        sel_generation = reinterpret_cast<uint32_t*>(mmio_base + 0x01c);
-
-        *magic_value = ('v' | 'i' << 8 | 'r' << 16 | 't' << 24);
-        *version = 2;
-        *queue_num_max = queue_size;
-        *sw_impl = 1;
+        memset(mmio_base, 0, 8192);
+        spsc_open(&drv2dev, "drv2dev", mmio_base, 4096);
+        spsc_open(&dev2drv, "dev2drv", mmio_base + 4096, 4096);
     }
 
     /*
@@ -186,22 +139,22 @@ public:
         for processed descriptors
         */
         // uint32_t interrupt_status_val = *interrupt_status;
-        uint32_t interrupt_ack_val = *interrupt_ack;
-        if ((interrupt_ack_val & 1)==1) {
-            // *interrupt_status = ~VIRTIO_MMIO_INT_VRING & interrupt_status_val;
-            // *interrupt_ack = ~1 & interrupt_ack_val;
-            // std::lock_guard<std::mutex> guard(interrupt_register_lock);
-            // *interrupt_register = *interrupt_register & ~(1 << (interrupt_number - 5));
-        }
+        // uint32_t interrupt_ack_val = *interrupt_ack;
+        // if ((interrupt_ack_val & 1)==1) {
+        //     // *interrupt_status = ~VIRTIO_MMIO_INT_VRING & interrupt_status_val;
+        //     // *interrupt_ack = ~1 & interrupt_ack_val;
+        //     // std::lock_guard<std::mutex> guard(interrupt_register_lock);
+        //     // *interrupt_register = *interrupt_register & ~(1 << (interrupt_number - 5));
+        // }
     }
 
     inline void set_interrupt(){
         /*
         Set required bit in interrupt_register to 1 if we need to trigger an interrupt
         */
-        uint32_t interrupt_status_val = *interrupt_status;
+        // uint32_t interrupt_status_val = *interrupt_status;
         if (true){
-            *interrupt_status = VIRTIO_MMIO_INT_VRING | interrupt_status_val;
+            //*interrupt_status = VIRTIO_MMIO_INT_VRING | interrupt_status_val;
             std::lock_guard<std::mutex> guard(interrupt_register_lock);
             /*
             FIXME: setting multiple interrupts on the plic seems to be buggy
@@ -218,80 +171,85 @@ public:
         /*
         TODO: Draw a state transition diagram here maybe?
         */
-        uint32_t prev_sel_generation = 0, curr_sel_generation=0;
-        while (!exit_thread_flag) {
-            if (*status & VIRTIO_CONFIG_S_DRIVER) {
-                break;
-            }
-        }
-        // uint32_t curr_device_features_sel=0;
-        while (!exit_thread_flag) {
-            curr_sel_generation = *sel_generation;
-            if (curr_sel_generation != prev_sel_generation){
-                *device_features = device_features_list[*device_features_sel];
-                *driver_features = driver_features_list[*driver_features_sel];
-                *sel_generation = curr_sel_generation + 1;
-                prev_sel_generation = curr_sel_generation + 1;
-            }
-            // TODO: read driver_features and do negotiation?
-
-            if (*status & VIRTIO_CONFIG_S_FEATURES_OK) {
-                break;
-            }
-        }
-
-        // Resize vectors for queue pointers
-        desc.resize(num_queues, nullptr);
-        avail.resize(num_queues, nullptr);
-        used.resize(num_queues, nullptr);
-        descriptor_table_address.resize(num_queues, 0);
-        available_ring_address.resize(num_queues, 0);
-        used_ring_address.resize(num_queues, 0);
-
-        /*
-        Stage where we get virtqueue addresses from driver
-        This implementation is still buggy timing wise sometimes
-        We fail to get past this stage. Improve this
-        */
-        while (!exit_thread_flag) {
-            curr_sel_generation = *sel_generation;
-            *queue_ready = 0;
-            if (curr_sel_generation != prev_sel_generation){
-                uint32_t queue_select_val = *queue_select;
-                // uint32_t queue_ready_val = *queue_ready;
-
-                descriptor_table_address[queue_select_val] = ((uint64_t)(*queue_desc_high) << 32) | (*queue_desc_low);
-                available_ring_address[queue_select_val] = ((uint64_t)(*queue_avail_high) << 32) | (*queue_avail_low);
-                used_ring_address[queue_select_val] = ((uint64_t)(*queue_used_high) << 32) | (*queue_used_low);
-
-
-                *sel_generation = curr_sel_generation + 1;
-                prev_sel_generation = curr_sel_generation + 1;
-
-                if (queue_select_val == (num_queues - 1))
-                    break;
-            }
-            usleep(1);
-        }
-        for (uint32_t i = 0; i < num_queues; i++) {
-            desc[i] = (struct vring_desc*) (memory + (descriptor_table_address[i] - starting_address));
-            avail[i] = (struct vring_avail*) (memory + (available_ring_address[i] - starting_address));
-            used[i] = (struct vring_used*) (memory + (used_ring_address[i] - starting_address));
-        }
+        struct virtio_msg *msg;
+        uint8_t inbuf[64];
+        uint8_t outbuf[64];
         while (!exit_thread_flag){
-            if (*status & VIRTIO_CONFIG_S_DRIVER_OK) {
-                break;
+          if (spsc_recv(&drv2dev, inbuf, 64)){
+            msg = (struct virtio_msg*)inbuf;
+            std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
+            if ((msg->type&1) == VIRTIO_MSG_TYPE_REQUEST){
+              std::cout<<"request\n";
+              switch (msg->msg_id){
+                case VIRTIO_MSG_DEVICE_INFO:
+                  struct get_device_info_resp *resp = (struct get_device_info_resp*)(outbuf+sizeof(struct virtio_msg));
+                  resp->device_id=1;
+                  resp->num_feature_bits=64;
+                  struct virtio_msg *outhdr = (struct virtio_msg*)outbuf;
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_DEVICE_INFO;
+                  outhdr->msg_size = 30;
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
+              }
+            } else {
             }
-        }
+          }
+          usleep(1);
+        } 
+        // // Resize vectors for queue pointers
+        // desc.resize(num_queues, nullptr);
+        // avail.resize(num_queues, nullptr);
+        // used.resize(num_queues, nullptr);
+        // descriptor_table_address.resize(num_queues, 0);
+        // available_ring_address.resize(num_queues, 0);
+        // used_ring_address.resize(num_queues, 0);
+
+        // /*
+        // Stage where we get virtqueue addresses from driver
+        // This implementation is still buggy timing wise sometimes
+        // We fail to get past this stage. Improve this
+        // */
+        // while (!exit_thread_flag) {
+        //     curr_sel_generation = *sel_generation;
+        //     *queue_ready = 0;
+        //     if (curr_sel_generation != prev_sel_generation){
+        //         uint32_t queue_select_val = *queue_select;
+        //         // uint32_t queue_ready_val = *queue_ready;
+
+        //         descriptor_table_address[queue_select_val] = ((uint64_t)(*queue_desc_high) << 32) | (*queue_desc_low);
+        //         available_ring_address[queue_select_val] = ((uint64_t)(*queue_avail_high) << 32) | (*queue_avail_low);
+        //         used_ring_address[queue_select_val] = ((uint64_t)(*queue_used_high) << 32) | (*queue_used_low);
+
+
+        //         *sel_generation = curr_sel_generation + 1;
+        //         prev_sel_generation = curr_sel_generation + 1;
+
+        //         if (queue_select_val == (num_queues - 1))
+        //             break;
+        //     }
+        //     usleep(1);
+        // }
+        // for (uint32_t i = 0; i < num_queues; i++) {
+        //     desc[i] = (struct vring_desc*) (memory + (descriptor_table_address[i] - starting_address));
+        //     avail[i] = (struct vring_avail*) (memory + (available_ring_address[i] - starting_address));
+        //     used[i] = (struct vring_used*) (memory + (used_ring_address[i] - starting_address));
+        // }
+        // while (!exit_thread_flag){
+        //     if (*status & VIRTIO_CONFIG_S_DRIVER_OK) {
+        //         break;
+        //     }
+        // }
     }
 
     void device_loop(){
         std::vector<uint16_t> processed(num_queues, 0);
 
         while (!exit_thread_flag) {
-            if (*magic_value != ('v' | 'i' << 8 | 'r' << 16 | 't' << 24)) {
-                return;
-            }
+            //if (*magic_value != ('v' | 'i' << 8 | 'r' << 16 | 't' << 24)) {
+            //    return;
+            //}
 
             // uint32_t queue_notify_val = *queue_notify;
             // If any interrupts have been acked by device, unset interrupt on plic

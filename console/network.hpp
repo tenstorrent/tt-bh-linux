@@ -71,7 +71,7 @@ public:
         slirp_fd = vdeslirp_fd(myslirp);
         signal(SIGPIPE, SIG_IGN);
 
-        *device_id = VIRTIO_ID_NET;
+        // *device_id = VIRTIO_ID_NET;
         queue_header_size = sizeof(struct virtio_net_hdr_mrg_rxbuf);
         header_processed = false;
       }
