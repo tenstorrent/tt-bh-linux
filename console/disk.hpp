@@ -71,10 +71,11 @@ public:
             fd = -1;
             return;
         }
-        // *device_id = VIRTIO_ID_BLOCK;
-
-        // struct virtio_blk_config *device_config = reinterpret_cast<struct virtio_blk_config*>(mmio_base + VIRTIO_MMIO_CONFIG);
-        // device_config->capacity = num_sectors;
+        device_id = VIRTIO_ID_BLOCK;
+        
+        struct virtio_blk_config *device_specific_config = (struct virtio_blk_config*)device_config;
+        device_specific_config->capacity = num_sectors;
+        device_config_size = sizeof(struct virtio_blk_config);
 
         queue_header_size = sizeof(struct virtio_blk_outhdr);
     }

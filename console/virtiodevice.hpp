@@ -70,6 +70,10 @@ protected:
     std::vector<struct vring_used*> used;
 
     spsc_queue drv2dev, dev2drv;
+    uint32_t device_id;
+    uint32_t device_status;
+    uint8_t device_config[0x100];
+    uint32_t device_config_size;
 
 public:
     VirtioDevice(int l2cpu_idx_, std::atomic<bool>& exit_flag, std::mutex& lock, int interrupt_number_, uint64_t mmio_region_offset_)
@@ -171,90 +175,174 @@ public:
         /*
         TODO: Draw a state transition diagram here maybe?
         */
-        struct virtio_msg *msg;
+  
+        // Resize vectors for queue pointers
+        desc.resize(num_queues, nullptr);
+        avail.resize(num_queues, nullptr);
+        used.resize(num_queues, nullptr);
+        descriptor_table_address.resize(num_queues, 0);
+        available_ring_address.resize(num_queues, 0);
+        used_ring_address.resize(num_queues, 0);
+
         uint8_t inbuf[64];
         uint8_t outbuf[64];
+        struct virtio_msg *outhdr = (struct virtio_msg*)outbuf;
+        struct virtio_msg *msg = (struct virtio_msg*)inbuf;
         while (!exit_thread_flag){
+          memset(inbuf, 0, 64);
           if (spsc_recv(&drv2dev, inbuf, 64)){
-            msg = (struct virtio_msg*)inbuf;
             std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
             if ((msg->type&1) == VIRTIO_MSG_TYPE_REQUEST){
-              std::cout<<"request\n";
+              memset(outbuf, 0, 64);
               switch (msg->msg_id){
-                case VIRTIO_MSG_DEVICE_INFO:
+                case VIRTIO_MSG_DEVICE_INFO: {
                   struct get_device_info_resp *resp = (struct get_device_info_resp*)(outbuf+sizeof(struct virtio_msg));
-                  resp->device_id=1;
+                  resp->device_id=device_id;
                   resp->num_feature_bits=64;
-                  struct virtio_msg *outhdr = (struct virtio_msg*)outbuf;
+                  resp->config_size = device_config_size; 
                   outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
                   outhdr->msg_id = VIRTIO_MSG_DEVICE_INFO;
                   outhdr->msg_size = 30;
                   spsc_send(&dev2drv, outbuf, 64);
                   set_interrupt();
                   break;
+                }
+                case VIRTIO_MSG_SET_DEVICE_STATUS: {
+                  uint32_t *status = (uint32_t*)(outbuf+sizeof(struct virtio_msg));
+                  device_status = *(uint32_t*)(inbuf+sizeof(struct virtio_msg));
+                  *status = device_status;
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_SET_DEVICE_STATUS;
+                  outhdr->msg_size = 10;
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
+                }
+                case VIRTIO_MSG_GET_DEVICE_STATUS: {
+                  uint32_t *status = (uint32_t*)(outbuf+sizeof(struct virtio_msg));
+                  *status = device_status;
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_GET_DEVICE_STATUS;
+                  outhdr->msg_size = 10;
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
+                }
+                case VIRTIO_MSG_GET_DEV_FEATURES: {
+                  struct get_features *req = (struct get_features*)(inbuf + sizeof(struct virtio_msg));
+                  struct get_features_resp *resp = (struct get_features_resp*)(outbuf + sizeof(struct virtio_msg));
+                  resp->index = req->index;
+                  resp->num = req->num;
+                  *(uint32_t*)(resp->features) = device_features_list[req->index];
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_GET_DEV_FEATURES;
+                  outhdr->msg_size = 18;
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
+                }
+                case VIRTIO_MSG_SET_DRV_FEATURES: {
+                  struct set_features *req = (struct set_features*)(inbuf + sizeof(struct virtio_msg));
+                  driver_features_list[req->index] = *(uint32_t*)(req->features);
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_SET_DRV_FEATURES;
+                  outhdr->msg_size = 6;
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
+                }
+                case VIRTIO_MSG_GET_VQUEUE: {
+                  struct get_vqueue *req = (struct get_vqueue*)(inbuf + sizeof(struct virtio_msg));
+                  struct get_vqueue_resp *resp = (struct get_vqueue_resp*)(outbuf + sizeof(struct virtio_msg));
+                  resp->index = req->index;
+                  resp->max_size = 16384;
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_GET_VQUEUE;
+                  outhdr->msg_size = sizeof(struct virtio_msg)+sizeof(struct get_vqueue_resp);
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
+                }
+                case VIRTIO_MSG_SET_VQUEUE: {
+                  struct set_vqueue *req = (struct set_vqueue*)(inbuf + sizeof(struct virtio_msg));
+                  descriptor_table_address[req->index]=req->descriptor_addr;
+                  used_ring_address[req->index]=req->device_addr;
+                  available_ring_address[req->index] = req->driver_addr;
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_SET_VQUEUE;
+                  outhdr->msg_size = sizeof(struct virtio_msg);
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
               }
-            } else {
+                case VIRTIO_MSG_GET_CONFIG: {
+                  struct get_config *req = (struct get_config*)(inbuf + sizeof(struct virtio_msg));
+                  struct get_config_resp *resp = (struct get_config_resp*)(outbuf + sizeof(struct virtio_msg));
+                  resp->generation = 0;
+                  resp->offset = req->offset;
+                  resp->size = req->size;
+                  printf("get_config %d %d %d %d\n", device_config[0], device_config[1], device_config[2], device_config[3]);
+                  printf("message %d %d\n", req->offset, req->size);
+                  memcpy(resp->config, device_config + req->offset, req->size);
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_GET_CONFIG;
+                  outhdr->msg_size = sizeof(struct virtio_msg)+sizeof(struct get_config_resp)+req->size;
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
+                }
             }
           }
+          }
           usleep(1);
+          if (device_status & VIRTIO_CONFIG_S_DRIVER_OK){
+              break;
+          }
         } 
-        // // Resize vectors for queue pointers
-        // desc.resize(num_queues, nullptr);
-        // avail.resize(num_queues, nullptr);
-        // used.resize(num_queues, nullptr);
-        // descriptor_table_address.resize(num_queues, 0);
-        // available_ring_address.resize(num_queues, 0);
-        // used_ring_address.resize(num_queues, 0);
 
-        // /*
-        // Stage where we get virtqueue addresses from driver
-        // This implementation is still buggy timing wise sometimes
-        // We fail to get past this stage. Improve this
-        // */
-        // while (!exit_thread_flag) {
-        //     curr_sel_generation = *sel_generation;
-        //     *queue_ready = 0;
-        //     if (curr_sel_generation != prev_sel_generation){
-        //         uint32_t queue_select_val = *queue_select;
-        //         // uint32_t queue_ready_val = *queue_ready;
-
-        //         descriptor_table_address[queue_select_val] = ((uint64_t)(*queue_desc_high) << 32) | (*queue_desc_low);
-        //         available_ring_address[queue_select_val] = ((uint64_t)(*queue_avail_high) << 32) | (*queue_avail_low);
-        //         used_ring_address[queue_select_val] = ((uint64_t)(*queue_used_high) << 32) | (*queue_used_low);
-
-
-        //         *sel_generation = curr_sel_generation + 1;
-        //         prev_sel_generation = curr_sel_generation + 1;
-
-        //         if (queue_select_val == (num_queues - 1))
-        //             break;
-        //     }
-        //     usleep(1);
-        // }
-        // for (uint32_t i = 0; i < num_queues; i++) {
-        //     desc[i] = (struct vring_desc*) (memory + (descriptor_table_address[i] - starting_address));
-        //     avail[i] = (struct vring_avail*) (memory + (available_ring_address[i] - starting_address));
-        //     used[i] = (struct vring_used*) (memory + (used_ring_address[i] - starting_address));
-        // }
-        // while (!exit_thread_flag){
-        //     if (*status & VIRTIO_CONFIG_S_DRIVER_OK) {
-        //         break;
-        //     }
-        // }
+        for (uint32_t i = 0; i < num_queues; i++) {
+            desc[i] = (struct vring_desc*) (memory + (descriptor_table_address[i] - starting_address));
+            avail[i] = (struct vring_avail*) (memory + (available_ring_address[i] - starting_address));
+            used[i] = (struct vring_used*) (memory + (used_ring_address[i] - starting_address));
+        }
     }
 
     void device_loop(){
         std::vector<uint16_t> processed(num_queues, 0);
 
-        while (!exit_thread_flag) {
-            //if (*magic_value != ('v' | 'i' << 8 | 'r' << 16 | 't' << 24)) {
-            //    return;
-            //}
-
-            // uint32_t queue_notify_val = *queue_notify;
-            // If any interrupts have been acked by device, unset interrupt on plic
-            ack_interrupt();
-
+        uint8_t inbuf[64];
+        uint8_t outbuf[64];
+        struct virtio_msg *outhdr = (struct virtio_msg*)outbuf;
+        struct virtio_msg *msg = (struct virtio_msg*)inbuf;
+        bool check_for_buffers=false;
+        while (!exit_thread_flag){
+          memset(inbuf, 0, 64);
+          if (spsc_recv(&drv2dev, inbuf, 64)){
+            std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
+            if ((msg->type&1) == VIRTIO_MSG_TYPE_REQUEST){
+              memset(outbuf, 0, 64);
+              switch (msg->msg_id){
+                case VIRTIO_MSG_GET_DEVICE_STATUS: {
+                  uint32_t *status = (uint32_t*)(outbuf+sizeof(struct virtio_msg));
+                  *status = device_status;
+                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                  outhdr->msg_id = VIRTIO_MSG_GET_DEVICE_STATUS;
+                  outhdr->msg_size = 10;
+                  spsc_send(&dev2drv, outbuf, 64);
+                  set_interrupt();
+                  break;
+                }
+                case VIRTIO_MSG_EVENT_AVAIL: {
+                  check_for_buffers = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (!check_for_buffers){
+              continue;
+          }
+          
             // Process each virtqueue
             for(uint32_t queue_idx=0; queue_idx<num_queues; queue_idx++){
                 struct vring_desc *desc_q = desc[queue_idx];
@@ -328,6 +416,13 @@ public:
                     }
                     if (should_i_set_interrupt){
                         // Set interrupt on plic if we processed atleast 1 descriptor
+                        struct virtio_msg *outhdr = (struct virtio_msg*)(outbuf);
+                        outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                        outhdr->msg_id = VIRTIO_MSG_EVENT_USED;
+                        outhdr->msg_size = sizeof(struct virtio_msg)+4;
+                        struct event_used *resp = (struct event_used*)(outbuf + sizeof(struct virtio_msg));
+                        resp->index = queue_idx;
+                        spsc_send(&dev2drv, outbuf, 64);
                         set_interrupt();
                     }
                 // }
