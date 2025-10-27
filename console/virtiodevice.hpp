@@ -317,8 +317,8 @@ public:
         bool check_for_buffers=false;
         while (!exit_thread_flag){
           memset(inbuf, 0, 64);
-          if (spsc_recv(&drv2dev, inbuf, 64)){
-            std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
+          while (spsc_recv(&drv2dev, inbuf, 64)){
+            // std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
             if ((msg->type&1) == VIRTIO_MSG_TYPE_REQUEST){
               memset(outbuf, 0, 64);
               switch (msg->msg_id){
@@ -340,7 +340,7 @@ public:
             }
           }
           if (!check_for_buffers){
-              continue;
+              // continue;
           }
           
             // Process each virtqueue

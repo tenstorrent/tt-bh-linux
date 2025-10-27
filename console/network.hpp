@@ -61,7 +61,7 @@ public:
         device_features_list[0] = 1<<VIRTIO_NET_F_GUEST_CSUM;
         device_features_list[1] = 1<<(VIRTIO_F_VERSION_1-32);
         
-        device_id = VIRTIO_ID_BLOCK;
+        device_id = VIRTIO_ID_NET;
 
         // Slirp setup
         vdeslirp_init(&slirpcfg, VDE_INIT_DEFAULT);
