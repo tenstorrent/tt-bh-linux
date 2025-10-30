@@ -233,20 +233,24 @@ public:
                   struct get_features_resp *resp = (struct get_features_resp*)(outbuf + sizeof(struct virtio_msg));
                   resp->index = req->index;
                   resp->num = req->num;
-                  *(uint32_t*)(resp->features) = device_features_list[req->index];
+                  for (uint32_t features_idx=req->index; features_idx < req->num; features_idx++){
+                    *((uint32_t*)(resp->features) + features_idx) = device_features_list[features_idx];
+                  }
                   outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
                   outhdr->msg_id = VIRTIO_MSG_GET_DEV_FEATURES;
-                  outhdr->msg_size = 18;
+                  outhdr->msg_size = sizeof(struct virtio_msg) + sizeof(struct get_features_resp) + sizeof(uint32_t) * resp->num;
                   spsc_send(&dev2drv, outbuf, 64);
                   set_interrupt();
                   break;
                 }
                 case VIRTIO_MSG_SET_DRV_FEATURES: {
                   struct set_features *req = (struct set_features*)(inbuf + sizeof(struct virtio_msg));
-                  driver_features_list[req->index] = *(uint32_t*)(req->features);
+                  for (uint32_t features_idx=req->index; features_idx < req->num; features_idx++){
+                    driver_features_list[features_idx] = *((uint32_t*)(req->features) + features_idx);
+                  }
                   outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
                   outhdr->msg_id = VIRTIO_MSG_SET_DRV_FEATURES;
-                  outhdr->msg_size = 6;
+                  outhdr->msg_size = sizeof(struct virtio_msg);
                   spsc_send(&dev2drv, outbuf, 64);
                   set_interrupt();
                   break;
