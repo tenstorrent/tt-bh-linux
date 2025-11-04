@@ -12,6 +12,14 @@
 #include "virtio_msg.h"
 #include "spsc_queue.h"
 
+// First 4K bytes reserved for registers for this device in case we need it for something
+struct blackhole_regs {
+	uint32_t doorbell_reg_generation;
+	uint32_t doorbell_reg_supported;
+	uint64_t doorbell_reg_address;
+	uint32_t regs[1020];
+};
+
 /*
 Virtual Base Class that implements most of the device-agnostic functionality needed
 to emulate a the device side of a virtio-mmio device added to the L2CPU's device tree
@@ -75,6 +83,8 @@ protected:
     uint8_t device_config[0x100];
     uint32_t device_config_size;
 
+    struct blackhole_regs* regs;
+
 public:
     VirtioDevice(int l2cpu_idx_, std::atomic<bool>& exit_flag, std::mutex& lock, int interrupt_number_, uint64_t mmio_region_offset_)
         : l2cpu_idx(l2cpu_idx_), 
@@ -98,9 +108,11 @@ public:
         interrupt_address_window = l2cpu.get_persistent_2M_tlb_window(interrupt_address);
         interrupt_register = reinterpret_cast<uint32_t*>(interrupt_address_window->get_window());
 
-        memset(mmio_base, 0, 8192);
-        spsc_open(&drv2dev, "drv2dev", mmio_base, 4096);
-        spsc_open(&dev2drv, "dev2drv", mmio_base + 4096, 4096);
+        memset(mmio_base, 0, 4096*3);
+        regs = reinterpret_cast<struct blackhole_regs*>(mmio_base); 
+        regs->doorbell_reg_generation = 0;
+        spsc_open(&drv2dev, "drv2dev", mmio_base + 4096, 4096);
+        spsc_open(&dev2drv, "dev2drv", mmio_base + 4096*2, 4096);
     }
 
     /*
@@ -175,6 +187,16 @@ public:
         /*
         TODO: Draw a state transition diagram here maybe?
         */
+        uint32_t prev_doorbell_reg_generation = 0, curr_doorbell_reg_generation=0;
+        while (!exit_thread_flag) {
+            curr_doorbell_reg_generation = regs->doorbell_reg_generation;
+            if (curr_doorbell_reg_generation != prev_doorbell_reg_generation){
+                // Doorbell reg is unspported
+                regs->doorbell_reg_supported = 0;
+                regs->doorbell_reg_generation = curr_doorbell_reg_generation + 1;
+                break;
+            }
+        }
   
         // Resize vectors for queue pointers
         desc.resize(num_queues, nullptr);
