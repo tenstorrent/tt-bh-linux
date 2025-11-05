@@ -17,7 +17,8 @@ struct blackhole_regs {
 	uint32_t doorbell_reg_generation;
 	uint32_t doorbell_reg_supported;
 	uint64_t doorbell_reg_address;
-	uint32_t regs[1020];
+	uint32_t doorbell_reg_write_value;
+	uint32_t regs[1019];
 };
 
 /*
@@ -192,7 +193,9 @@ public:
             curr_doorbell_reg_generation = regs->doorbell_reg_generation;
             if (curr_doorbell_reg_generation != prev_doorbell_reg_generation){
                 // Doorbell reg is unspported
-                regs->doorbell_reg_supported = 0;
+                regs->doorbell_reg_supported = 1;
+                regs->doorbell_reg_address = 0x000430000000;
+                regs->doorbell_reg_write_value = 0;
                 regs->doorbell_reg_generation = curr_doorbell_reg_generation + 1;
                 break;
             }
