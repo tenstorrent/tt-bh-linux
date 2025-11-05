@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <vector>
 #include <mutex> // Added for std::mutex
+#include <poll.h>
 #include "l2cpu.h"
 
 #include "virtio_msg.h"
@@ -85,6 +86,7 @@ protected:
     uint32_t device_config_size;
 
     struct blackhole_regs* regs;
+    int chardev_fd;
 
 public:
     VirtioDevice(int l2cpu_idx_, std::atomic<bool>& exit_flag, std::mutex& lock, int interrupt_number_, uint64_t mmio_region_offset_)
@@ -114,6 +116,13 @@ public:
         regs->doorbell_reg_generation = 0;
         spsc_open(&drv2dev, "drv2dev", mmio_base + 4096, 4096);
         spsc_open(&dev2drv, "dev2drv", mmio_base + 4096*2, 4096);
+
+        
+        chardev_fd = open("/dev/tenstorrent/0", O_RDWR);
+        if (chardev_fd < 0){
+          perror("chardev open failed");
+          exit(1);
+        }
     }
 
     /*
@@ -344,9 +353,11 @@ public:
         struct virtio_msg *outhdr = (struct virtio_msg*)outbuf;
         struct virtio_msg *msg = (struct virtio_msg*)inbuf;
         bool check_for_buffers=false;
+        struct pollfd pfd = {.fd = chardev_fd, .events = POLLIN};
         while (!exit_thread_flag){
           memset(inbuf, 0, 64);
-          while (spsc_recv(&drv2dev, inbuf, 64)){
+          while (poll(&pfd, 1, 1) > 0){
+            spsc_recv(&drv2dev, inbuf, 64);
             // std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
             if ((msg->type&1) == VIRTIO_MSG_TYPE_REQUEST){
               memset(outbuf, 0, 64);
