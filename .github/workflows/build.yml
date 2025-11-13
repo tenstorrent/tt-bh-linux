@@ -13,5 +13,6 @@ jobs:
     steps:
       - name: Print MSI Info
         run: |
+           /opt/tenstorrent/.venv/bin/tt-smi -s | jq .device_info[0].firmwares
            /opt/tenstorrent/.venv/bin/python3 -c "from pyluwen import PciChip; print(hex(PciChip(0).noc_read32(0, 19, 24, 0xf800000000000000 + 0x54)))" 
            /opt/tenstorrent/.venv/bin/python3 -c "from pyluwen import PciChip; print(hex(PciChip(0).noc_read32(0, 19, 24, 0xf800000000000000 + 0x58)))" 
