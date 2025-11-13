@@ -42,8 +42,8 @@ public:
     struct virtio_blk_outhdr *req;
     std::string disk_image_path;
 
-    VirtioBlk(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock, int interrupt_number_, uint64_t mmio_region_offset_, const std::string& image_path)
-        : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, interrupt_number_, mmio_region_offset_), disk_image_path(image_path) {
+    VirtioBlk(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock, int interrupt_number_, uint64_t mmio_region_offset_, const std::string& image_path, bool virtio_msg_msi_supported_, uint64_t msi_addr_, uint32_t msi_value_)
+        : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, interrupt_number_, mmio_region_offset_, virtio_msg_msi_supported_, msi_addr_, msi_value_), disk_image_path(image_path) {
         // FIXME: I don't know if we're handling the last sector's size, reads and writes properly
         
         num_queues = 1;

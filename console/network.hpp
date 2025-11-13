@@ -54,8 +54,8 @@ public:
     uint8_t buffer[PACKET_SIZE];
     bool header_processed;
 
-    VirtioNet(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock, int interrupt_number_, uint64_t mmio_region_offset_)
-        : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, interrupt_number_, mmio_region_offset_) {
+    VirtioNet(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock, int interrupt_number_, uint64_t mmio_region_offset_, bool virtio_msg_msi_supported_, uint64_t msi_addr_, uint32_t msi_value_)
+        : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, interrupt_number_, mmio_region_offset_, virtio_msg_msi_supported_, msi_addr_, msi_value_) {
 
         num_queues = 2;
         device_features_list[0] = 1<<VIRTIO_NET_F_GUEST_CSUM;

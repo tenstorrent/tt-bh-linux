@@ -87,15 +87,21 @@ protected:
 
     struct blackhole_regs* regs;
     int chardev_fd;
+    bool virtio_msg_msi_supported;
+    uint64_t msi_addr;
+    uint32_t msi_value;
 
 public:
-    VirtioDevice(int l2cpu_idx_, std::atomic<bool>& exit_flag, std::mutex& lock, int interrupt_number_, uint64_t mmio_region_offset_)
+    VirtioDevice(int l2cpu_idx_, std::atomic<bool>& exit_flag, std::mutex& lock, int interrupt_number_, uint64_t mmio_region_offset_, bool virtio_msg_msi_supported_, uint64_t msi_addr_, uint32_t msi_value_)
         : l2cpu_idx(l2cpu_idx_), 
           l2cpu(l2cpu_idx_), 
           mmio_region_offset(mmio_region_offset_),
           interrupt_number(interrupt_number_),
           interrupt_register_lock(lock),
-          exit_thread_flag(exit_flag) {
+          exit_thread_flag(exit_flag),
+          virtio_msg_msi_supported(virtio_msg_msi_supported_),
+          msi_addr(msi_addr_),
+          msi_value(msi_value_){
 
         starting_address = l2cpu.get_starting_address();
 
@@ -203,8 +209,8 @@ public:
             if (curr_doorbell_reg_generation != prev_doorbell_reg_generation){
                 // Doorbell reg is unspported
                 regs->doorbell_reg_supported = 1;
-                regs->doorbell_reg_address = 0x000430000000;
-                regs->doorbell_reg_write_value = 0;
+                regs->doorbell_reg_address = msi_addr;
+                regs->doorbell_reg_write_value = msi_value;
                 regs->doorbell_reg_generation = curr_doorbell_reg_generation + 1;
                 break;
             }
