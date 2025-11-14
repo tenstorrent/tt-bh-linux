@@ -15,11 +15,10 @@
 
 // First 4K bytes reserved for registers for this device in case we need it for something
 struct blackhole_regs {
-	uint32_t doorbell_reg_generation;
-	uint32_t doorbell_reg_supported;
-	uint64_t doorbell_reg_address;
-	uint32_t doorbell_reg_write_value;
-	uint32_t regs[1019];
+	uint32_t msi_reg_generation;
+	uint32_t msi_reg_supported;
+	uint64_t msi_reg_address;
+	uint32_t msi_reg_write_value;
 };
 
 /*
@@ -119,7 +118,7 @@ public:
 
         memset(mmio_base, 0, 4096*3);
         regs = reinterpret_cast<struct blackhole_regs*>(mmio_base); 
-        regs->doorbell_reg_generation = 0;
+        regs->msi_reg_generation = 0;
         spsc_open(&drv2dev, "drv2dev", mmio_base + 4096, 4096);
         spsc_open(&dev2drv, "dev2drv", mmio_base + 4096*2, 4096);
 
@@ -203,15 +202,15 @@ public:
         /*
         TODO: Draw a state transition diagram here maybe?
         */
-        uint32_t prev_doorbell_reg_generation = 0, curr_doorbell_reg_generation=0;
+        uint32_t prev_msi_reg_generation = 0, curr_msi_reg_generation=0;
         while (!exit_thread_flag) {
-            curr_doorbell_reg_generation = regs->doorbell_reg_generation;
-            if (curr_doorbell_reg_generation != prev_doorbell_reg_generation){
+            curr_msi_reg_generation = regs->msi_reg_generation;
+            if (curr_msi_reg_generation != prev_msi_reg_generation){
                 // Doorbell reg is unspported
-                regs->doorbell_reg_supported = 1;
-                regs->doorbell_reg_address = msi_addr;
-                regs->doorbell_reg_write_value = msi_value;
-                regs->doorbell_reg_generation = curr_doorbell_reg_generation + 1;
+                regs->msi_reg_supported = 1;
+                regs->msi_reg_address = msi_addr;
+                regs->msi_reg_write_value = msi_value;
+                regs->msi_reg_generation = curr_msi_reg_generation + 1;
                 break;
             }
         }
