@@ -361,6 +361,7 @@ public:
         struct pollfd pfd = {.fd = chardev_fd, .events = POLLIN};
         while (!exit_thread_flag){
           memset(inbuf, 0, 64);
+          check_for_buffers=false;
           while (poll(&pfd, 1, 1) > 0){
             spsc_recv(&drv2dev, inbuf, 64);
             // std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
@@ -383,9 +384,9 @@ public:
                 }
               }
             }
-          }
-          if (!check_for_buffers){
-              // continue;
+            if (check_for_buffers){
+                break;
+            }
           }
           
             // Process each virtqueue
