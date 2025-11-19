@@ -362,30 +362,31 @@ public:
         while (!exit_thread_flag){
           memset(inbuf, 0, 64);
           check_for_buffers=false;
-          while (poll(&pfd, 1, 1) > 0){
-            spsc_recv(&drv2dev, inbuf, 64);
-            // std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
-            if ((msg->type&1) == VIRTIO_MSG_TYPE_REQUEST){
-              memset(outbuf, 0, 64);
-              switch (msg->msg_id){
-                case VIRTIO_MSG_GET_DEVICE_STATUS: {
-                  uint32_t *status = (uint32_t*)(outbuf+sizeof(struct virtio_msg));
-                  *status = device_status;
-                  outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
-                  outhdr->msg_id = VIRTIO_MSG_GET_DEVICE_STATUS;
-                  outhdr->msg_size = 10;
-                  spsc_send(&dev2drv, outbuf, 64);
-                  set_interrupt();
-                  break;
-                }
-                case VIRTIO_MSG_EVENT_AVAIL: {
-                  check_for_buffers = true;
-                  break;
+          if (poll(&pfd, 1, 1) > 0){
+            while(spsc_recv(&drv2dev, inbuf, 64)){
+              // std::cout<<(uint32_t)msg->type<<" "<<(uint32_t)msg->msg_id<<" "<<msg->dev_id<<" "<<msg->msg_size<<"\n";
+              if ((msg->type&1) == VIRTIO_MSG_TYPE_REQUEST){
+                memset(outbuf, 0, 64);
+                switch (msg->msg_id){
+                  case VIRTIO_MSG_GET_DEVICE_STATUS: {
+                    uint32_t *status = (uint32_t*)(outbuf+sizeof(struct virtio_msg));
+                    *status = device_status;
+                    outhdr->type = VIRTIO_MSG_TYPE_RESPONSE;
+                    outhdr->msg_id = VIRTIO_MSG_GET_DEVICE_STATUS;
+                    outhdr->msg_size = 10;
+                    spsc_send(&dev2drv, outbuf, 64);
+                    set_interrupt();
+                    break;
+                  }
+                  case VIRTIO_MSG_EVENT_AVAIL: {
+                    check_for_buffers = true;
+                    break;
+                  }
                 }
               }
-            }
-            if (check_for_buffers){
-                break;
+              // if (check_for_buffers){
+              //     break;
+              // }
             }
           }
           
@@ -473,7 +474,7 @@ public:
                     }
                 // }
             }
-            usleep(1);
+            // usleep(1);
         }
     }
     virtual ~VirtioDevice() = default;
