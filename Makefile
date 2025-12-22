@@ -441,7 +441,7 @@ endef
 
 .PHONY: apt_update \
 	boot \
-	boot_all
+	boot_all \
 	build_all \
 	build_hosttool \
 	build_linux \
