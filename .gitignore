@@ -1,7 +1,10 @@
 /blackhole-p100*.dtb
+/blackhole-card.dtb
 /Image
-/rootfs.ext4
+*.ext4
 /fw_jump.bin
 /opensbi/
 /linux/
 *.swp
+__pycache__/
+tt-installer-*.sh
