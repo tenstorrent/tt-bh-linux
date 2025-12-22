@@ -54,20 +54,20 @@ public:
     uint8_t buffer[PACKET_SIZE];
     bool header_processed;
 
-    VirtioNet(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock, int interrupt_number_, uint64_t mmio_region_offset_)
+    VirtioNet(int l2cpu_idx, std::atomic<bool>& exit_flag, std::mutex& interrupt_register_lock, int interrupt_number_, uint64_t mmio_region_offset_, int ssh_port)
         : VirtioDevice(l2cpu_idx, exit_flag, interrupt_register_lock, interrupt_number_, mmio_region_offset_) {
 
         num_queues = 2;
         device_features_list[0] = 1<<VIRTIO_NET_F_GUEST_CSUM;
         device_features_list[1] = 1<<(VIRTIO_F_VERSION_1-32);
-        
+
         // Slirp setup
         vdeslirp_init(&slirpcfg, VDE_INIT_DEFAULT);
         myslirp = vdeslirp_open(&slirpcfg);
         struct in_addr host, guest;
         inet_aton("127.0.0.1", &host);
         inet_aton("10.0.2.15", &guest);
-        vdeslirp_add_fwd(myslirp, 0, host, 2222, guest, 22);
+        vdeslirp_add_fwd(myslirp, 0, host, ssh_port, guest, 22);
         slirp_fd = vdeslirp_fd(myslirp);
         signal(SIGPIPE, SIG_IGN);
 
