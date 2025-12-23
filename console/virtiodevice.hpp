@@ -209,6 +209,8 @@ public:
             */
             // *interrupt_register = *interrupt_register | (1 << (interrupt_number - 5));
             *interrupt_register = (1 << (interrupt_number - 5));
+            __sync_synchronize();
+            *interrupt_register = 0;
         }
     }
 
