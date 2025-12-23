@@ -67,7 +67,7 @@ public:
         struct in_addr host, guest;
         inet_aton("127.0.0.1", &host);
         inet_aton("10.0.2.15", &guest);
-        vdeslirp_add_fwd(myslirp, 0, host, 2222, guest, 22);
+        vdeslirp_add_fwd(myslirp, 0, host, 2222 + l2cpu_idx, guest, 22);
         slirp_fd = vdeslirp_fd(myslirp);
         signal(SIGPIPE, SIG_IGN);
 
