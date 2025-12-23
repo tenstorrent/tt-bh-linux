@@ -15,6 +15,15 @@ else
 	PYTHON := python3
 endif
 
+# Ensure /sbin and /usr/sbin are in PATH for tools like e2fsck, resize2fs
+ifeq (,$(findstring /sbin,$(PATH)))
+    PATH := $(PATH):/sbin
+endif
+ifeq (,$(findstring /usr/sbin,$(PATH)))
+    PATH := $(PATH):/usr/sbin
+endif
+export PATH
+
 # Default riscv64 disk image file. Change this to point at your local image
 # if you have one
 DISK_IMAGE := rootfs.ext4
