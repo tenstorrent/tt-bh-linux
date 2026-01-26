@@ -97,11 +97,12 @@ boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_pyth
 
 # Boot one L2CPU in Blackhole RISC-V CPU into an initramfs specified by $(INITRAMFS)
 boot_initramfs: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400100000000 --rootfs_dst 0x400165000000 --kernel_bin Image --kernel_dst 0x400100200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400100100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
 	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
 
-# boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-# 	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400100000000 0x400100000000 0x400100000000 0x400180000000 --rootfs_dst 0x400165000000 0x400165000000 0x400165000000 0x4001e5000000 --kernel_bin Image --kernel_dst 0x400100200000 0x400100200000 0x400100200000 0x400180200000 --dtb_bin blackhole-card.dtb blackhole-card.dtb blackhole-card2.dtb blackhole-card3.dtb --dtb_dst 0x400100100000 0x400100100000 0x400100100000 0x400180100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
+boot_all: _need_linux _need_opensbi _need_dtb _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
+	$(PYTHON) -c "from tt_smi.tt_smi_backend import pci_board_reset; from pyluwen import pci_scan; pci_board_reset(pci_scan())"
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400100000000 0x400100000000 0x400100000000 0x400180000000 --rootfs_dst 0x400165000000 0x400165000000 0x400165000000 0x4001e5000000 --kernel_bin Image --kernel_dst 0x400100200000 0x400100200000 0x400100200000 0x400180200000 --dtb_bin blackhole-card.dtb blackhole-card.dtb blackhole-card2.dtb blackhole-card3.dtb --dtb_dst 0x400100100000 0x400100100000 0x400100100000 0x400180100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
@@ -111,26 +112,26 @@ connect: _need_hosttool _need_ttkmd
 ssh:
 	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
-# SESSION = connect_all
-# # Launch tmux with a 2x2 grid and connect to each l2cpu in each
-# connect_all: _need_tmux
-# 	# Kill any existing sessions named connect_all
-# 	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
+SESSION = connect_all
+# Launch tmux with a 2x2 grid and connect to each l2cpu in each
+connect_all: _need_tmux
+	# Kill any existing sessions named connect_all
+	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
 
-# 	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 0' 	# pane 0
-# 	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 1' 	# pane 1 (right)
-# 	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
-# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 2' 	# pane 2 (bottom-left)
-# 	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
-# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 3' 	# pane 3 (bottom-right)
-# 	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
+	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 0 & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $$((2222 + 4*$(TTDEVICE))) root@localhost /doom-ascii -iwad /DOOM.WAD' 	# pane 0
+	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 1 & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $$((2223 + 4*$(TTDEVICE))) root@localhost /doom-ascii -iwad /DOOM.WAD' 	# pane 1 (right)
+	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
+	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 2 & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $$((2224 + 4*$(TTDEVICE))) root@localhost /doom-ascii -iwad /DOOM.WAD' 	# pane 2 (bottom-left)
+	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
+	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 3 & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $$((2225 + 4*$(TTDEVICE))) root@localhost /doom-ascii -iwad /DOOM.WAD' 	# pane 3 (bottom-right)
+	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
 
-# 	# If we're already inside a tmux session, we need to use switch-client
-# 	if [ -n "$$TMUX" ]; then \
-#         tmux switch-client -t "$(SESSION)"; \
-#     else \
-#         tmux attach-session -t "$(SESSION)"; \
-#     fi
+	# If we're already inside a tmux session, we need to use switch-client
+	if [ -n "$$TMUX" ]; then \
+  		tmux switch-client -t "$(SESSION)"; \
+  else \
+    	tmux attach-session -t "$(SESSION)"; \
+  fi
 
 user-data.img: user-data.yaml _need_cloud_image_utils
 	cloud-localds -d raw user-data.img  user-data.yaml
@@ -179,6 +180,8 @@ build_linux: _need_riscv64_toolchain _need_gcc _need_dtc _need_linux_tree
 	$(MAKE) -C linux -j $(nproc) $(quiet_make)
 	ln -f linux/arch/riscv/boot/Image Image
 	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-card.dtb blackhole-card.dtb
+	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-card2.dtb blackhole-card2.dtb
+	ln -f linux/arch/riscv/boot/dts/tenstorrent/blackhole-card3.dtb blackhole-card3.dtb
 
 # Build opensbi
 build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
@@ -287,7 +290,7 @@ endef
 
 # Clone the Tenstorrent Linux kernel source tree
 clone_linux: _need_git
-	$(call _clone,https://github.com/tenstorrent/linux,linux,tt-blackhole)
+	$(call _clone,https://github.com/asrinivasanTT/linux,linux,tt-blackhole-4-l2cpu)
 
 # Clone the Tenstorrent opensbi source tree
 clone_opensbi: _need_git

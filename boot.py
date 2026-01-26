@@ -86,7 +86,6 @@ def read_bin_file(file_path):
 def main():
     args = parse_args()
     l2cpus_to_boot = args.l2cpu
-    pci_board_reset([args.ttdevice])
     f = os.open(f"/dev/tenstorrent/{args.ttdevice}", os.O_RDWR)
     chip = PciChip(args.ttdevice)
 
