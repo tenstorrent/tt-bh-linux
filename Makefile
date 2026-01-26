@@ -102,7 +102,7 @@ boot_initramfs: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool 
 
 boot_all: _need_linux _need_opensbi _need_dtb _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
 	$(PYTHON) -c "from tt_smi.tt_smi_backend import pci_board_reset; from pyluwen import pci_scan; pci_board_reset(pci_scan())"
-	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400100000000 0x400100000000 0x400100000000 0x400180000000 --rootfs_dst 0x400165000000 0x400165000000 0x400165000000 0x4001e5000000 --kernel_bin Image --kernel_dst 0x400100200000 0x400100200000 0x400100200000 0x400180200000 --dtb_bin blackhole-card.dtb blackhole-card.dtb blackhole-card2.dtb blackhole-card3.dtb --dtb_dst 0x400100100000 0x400100100000 0x400100100000 0x400180100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
+	for ttdevice in 0 1 2 3; do $(PYTHON) boot.py --boot --ttdevice $$ttdevice --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400100000000 0x400100000000 0x400100000000 0x400180000000 --rootfs_dst 0x400165000000 0x400165000000 0x400165000000 0x4001e5000000 --kernel_bin Image --kernel_dst 0x400100200000 0x400100200000 0x400100200000 0x400180200000 --dtb_bin blackhole-card.dtb blackhole-card.dtb blackhole-card2.dtb blackhole-card3.dtb --dtb_dst 0x400100100000 0x400100100000 0x400100100000 0x400180100000 --boot_device initramfs --rootfs_bin $(INITRAMFS) & done
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
@@ -113,25 +113,32 @@ ssh:
 	ssh -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes -o User=debian -p2222 localhost
 
 SESSION = connect_all
-# Launch tmux with a 2x2 grid and connect to each l2cpu in each
+# Launch tmux with a 4x4 grid and connect to each TTDEVICE and l2cpu combination
 connect_all: _need_tmux
 	# Kill any existing sessions named connect_all
 	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
 
-	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 0 & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $$((2222 + 4*$(TTDEVICE))) root@localhost /doom-ascii -iwad /DOOM.WAD' 	# pane 0
-	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 1 & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $$((2223 + 4*$(TTDEVICE))) root@localhost /doom-ascii -iwad /DOOM.WAD' 	# pane 1 (right)
-	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 2 & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $$((2224 + 4*$(TTDEVICE))) root@localhost /doom-ascii -iwad /DOOM.WAD' 	# pane 2 (bottom-left)
-	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
-	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 3 & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $$((2225 + 4*$(TTDEVICE))) root@localhost /doom-ascii -iwad /DOOM.WAD' 	# pane 3 (bottom-right)
-	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
+	# Create all 16 panes (4 TTDEVICEs x 4 l2cpus) using nested loops
+	first=1; \
+	for ttdevice in 0 1 2 3; do \
+		for l2cpu in 0 1 2 3; do \
+			port=$$((2222 + 4*ttdevice + l2cpu)); \
+			if [ $$first -eq 1 ]; then \
+				tmux new-session -d -s "$(SESSION)" './console/tt-bh-linux --ttdevice '$$ttdevice' --l2cpu '$$l2cpu' & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p '$$port' root@localhost /doom-ascii -iwad /DOOM.WAD'; \
+				first=0; \
+			else \
+				tmux split-window -t "$(SESSION)" './console/tt-bh-linux --ttdevice '$$ttdevice' --l2cpu '$$l2cpu' & sleep 3s; ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p '$$port' root@localhost /doom-ascii -iwad /DOOM.WAD'; \
+				tmux select-layout -t "$(SESSION)" tiled; \
+			fi; \
+		done; \
+	done
 
 	# If we're already inside a tmux session, we need to use switch-client
 	if [ -n "$$TMUX" ]; then \
-  		tmux switch-client -t "$(SESSION)"; \
-  else \
-    	tmux attach-session -t "$(SESSION)"; \
-  fi
+		tmux switch-client -t "$(SESSION)"; \
+	else \
+		tmux attach-session -t "$(SESSION)"; \
+	fi
 
 user-data.img: user-data.yaml _need_cloud_image_utils
 	cloud-localds -d raw user-data.img  user-data.yaml
