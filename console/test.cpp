@@ -54,9 +54,23 @@ void TestMemoryPtr(){
     }
 }
 
+
+// Check if 0x400030000000 + x == 0x400130000000 + x
+void TestMemoryWrapAround(){
+    L2CPU l2cpu(0);
+    std::uniform_int_distribution<uint64_t> distribution(0, 4ULL * 1024*1024*1024);
+
+    for (int i=0; i< 100; i++){
+        uint64_t random_address = distribution(gen);
+        random_address -= (random_address % 4); // Align address to 4 bytes
+        assert(l2cpu.read32(0x4000'3000'0000ULL + random_address) == l2cpu.read32(0x4001'3000'0000ULL + random_address));
+    }
+}
+
 int main(){
     TestL2CPU23SharedMemoryTile();
     TestL2CPUNocNodeID();
     TestMemoryPtr();
+    TestMemoryWrapAround();
     return 0;
 }
