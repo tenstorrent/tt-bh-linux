@@ -29,6 +29,7 @@ export PATH
 DISK_IMAGE := rootfs.ext4
 
 L2CPU ?= 0
+TTDEVICE ?= 0
 
 # Use bash as the shell
 SHELL := /bin/bash
@@ -88,20 +89,20 @@ help:
 
 # Boot one L2CPU in Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
-	./console/tt-bh-linux --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
+	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
 
 # Boot one L2CPU in Blackhole RISC-V CPU into an initramfs specified by $(INITRAMFS)
 boot_initramfs: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
-	./console/tt-bh-linux --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
+	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
 
 # boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-# 	$(PYTHON) boot.py --boot --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 0x400030000000 0x400030000000 0x4000b0000000 --rootfs_bin $(DISK_IMAGE) --rootfs_dst 0x4000e5000000 0x4000e5000000 0x400065000000 0x4000e5000000  --kernel_bin Image --kernel_dst 0x400030200000 0x400030200000 0x400030200000 0x4000b0200000 --dtb_bin blackhole-p100.dtb blackhole-p100.dtb blackhole-p100-2.dtb blackhole-p100-3.dtb --dtb_dst 0x400030100000 0x400030100000 0x400030100000 0x4000b0100000
+# 	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu 0 1 2 3 --opensbi_bin fw_jump.bin --opensbi_dst 0x400100000000 0x400100000000 0x400100000000 0x400180000000 --rootfs_dst 0x400165000000 0x400165000000 0x400165000000 0x4001e5000000 --kernel_bin Image --kernel_dst 0x400100200000 0x400100200000 0x400100200000 0x400180200000 --dtb_bin blackhole-card.dtb blackhole-card.dtb blackhole-card2.dtb blackhole-card3.dtb --dtb_dst 0x400100100000 0x400100100000 0x400100100000 0x400180100000 --boot_device initramfs --rootfs_bin $(INITRAMFS)
 
 # Connect to console (requires a booted RISC-V)
 connect: _need_hosttool _need_ttkmd
-	./console/tt-bh-linux --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
+	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
 
 # Connect over SSH (requires a booted RISC-V)
 ssh:
@@ -113,12 +114,12 @@ ssh:
 # 	# Kill any existing sessions named connect_all
 # 	tmux has-session -t "$(SESSION)" 2>/dev/null && tmux kill-session -t "$(SESSION)" || true
 
-# 	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --l2cpu 0' 	# pane 0
-# 	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 1' 	# pane 1 (right)
+# 	tmux new-session  -d -s "$(SESSION)" './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 0' 	# pane 0
+# 	tmux split-window -h -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 1' 	# pane 1 (right)
 # 	tmux select-pane   -t "$(SESSION)":0.0 									# back to pane 0
-# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 2' 	# pane 2 (bottom-left)
+# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 2' 	# pane 2 (bottom-left)
 # 	tmux select-pane   -t "$(SESSION)":0.1 									# go to pane 1
-# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --l2cpu 3' 	# pane 3 (bottom-right)
+# 	tmux split-window -v -t "$(SESSION)":0 './console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu 3' 	# pane 3 (bottom-right)
 # 	tmux select-layout -t "$(SESSION)":0 tiled 								# ensure 2x2 grid
 
 # 	# If we're already inside a tmux session, we need to use switch-client
