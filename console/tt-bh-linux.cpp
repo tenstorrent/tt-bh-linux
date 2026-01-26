@@ -108,12 +108,8 @@ int main(int argc, char **argv){
 
 
   std::vector<std::thread> threads;
-  threads.emplace_back(console_main, ttdevice,  l2cpu);
-  threads.emplace_back(disk_main, ttdevice, l2cpu, std::ref(interrupt_register_lock), 33, 2ULL*1024*1024, disk_image_path);
-  threads.emplace_back(network_main, ttdevice, l2cpu, std::ref(interrupt_register_lock), 32, 4ULL*1024*1024);
-  if (!cloud_init_path.empty()) {
-    threads.emplace_back(disk_main, ttdevice, l2cpu, std::ref(interrupt_register_lock), 31, 6ULL*1024*1024, cloud_init_path);
-  }
+  threads.emplace_back(console_main, ttdevice, l2cpu);
+  threads.emplace_back(network_main, ttdevice, l2cpu, std::ref(interrupt_register_lock), 33, 2ULL*1024*1024);
   for (auto& thread: threads){
     thread.join();
   }

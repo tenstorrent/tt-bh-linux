@@ -26,10 +26,10 @@ const std::map<int, xy_t> l2cpu_tile_mapping {
 This represents the starting address of the DRAM for each L2CPU
 */
 const std::map<int, uint64_t> l2cpu_starting_address_mapping {
-    {0, 0x4000'3000'0000ULL},
-    {1, 0x4000'3000'0000ULL},
-    {2, 0x4000'3000'0000ULL},
-    {3, 0x4000'b000'0000ULL},
+    {0, 0x4001'0000'0000ULL},
+    {1, 0x4001'0000'0000ULL},
+    {2, 0x4001'0000'0000ULL},
+    {3, 0x4001'8000'0000ULL},
 };
 
 
@@ -55,10 +55,9 @@ L2CPU::L2CPU(int idx, int card_idx)
     coordinates = l2cpu_tile_mapping.at(idx);
     memory_size = l2cpu_memory_size_mapping.at(idx);
 
-    memory = reinterpret_cast<uint8_t*>(mmap(nullptr, (2ULL<<32), PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    memory = reinterpret_cast<uint8_t*>(mmap(nullptr, (1ULL<<32), PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 
-    first = std::make_unique<TlbWindow4G>(fd, coordinates.x, coordinates.y, 0x4000'0000'0000ULL, memory, true);
-    second = std::make_unique<TlbWindow4G>(fd, coordinates.x, coordinates.y, 0x4001'0000'0000ULL, memory+(1ULL<<32), true);
+    first = std::make_unique<TlbWindow4G>(fd, coordinates.x, coordinates.y, 0x4001'0000'0000ULL, memory, true);
 }
 
 uint64_t L2CPU::get_starting_address(){
@@ -98,7 +97,7 @@ std::unique_ptr<TlbWindow2M> L2CPU::get_persistent_2M_tlb_window(uint64_t addr){
 
 // Returns the starting address of the L2CPU's memory
 uint8_t* L2CPU::get_memory_ptr(){
-    return memory+(starting_address-0x4000'0000'0000ULL);
+    return memory+(starting_address-0x4001'0000'0000ULL);
 }
 
 void L2CPU::set_frequency(){
@@ -176,7 +175,7 @@ void L2CPU::set_frequency(){
 
 L2CPU::~L2CPU() noexcept
 {
-    munmap(memory, 2ULL<<32);
+    munmap(memory, 1ULL<<32);
     close(fd);
 }
 
