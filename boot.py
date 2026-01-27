@@ -85,8 +85,8 @@ def read_bin_file(file_path):
 def main():
     args = parse_args()
     l2cpus_to_boot = args.l2cpu
-    chip = PciChip(args.ttdevice)
     pci_board_reset([args.ttdevice])
+    chip = PciChip(args.ttdevice)
 
     time.sleep(5) # Sleep 5s, telemetry sometimes not available immediately after reset
     telemetry = chip.get_telemetry()
