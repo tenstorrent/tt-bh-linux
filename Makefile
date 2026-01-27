@@ -7,12 +7,15 @@ ifeq ($(QUIET),1)
     quiet_make := -s
 endif
 
-# Default to python env installed by tt-installer
-# If it doesn't exist, use python in current venv
+# Default to $(PYTHON) if specified
+# otherwise use python env installed by tt-installer
+# if tt-installer env doesn't exist, use python in current venv
+ifndef PYTHON
 ifneq ($(wildcard $(HOME)/.tenstorrent-venv/bin/python),)
 	PYTHON := $(HOME)/.tenstorrent-venv/bin/python
 else
 	PYTHON := python3
+endif
 endif
 
 # Ensure /sbin and /usr/sbin are in PATH for tools like e2fsck, resize2fs
