@@ -86,6 +86,7 @@ def main():
     args = parse_args()
     l2cpus_to_boot = args.l2cpu
     pci_board_reset([args.ttdevice])
+    f = os.open(f"/dev/tenstorrent/{args.ttdevice}", os.O_RDWR)
     chip = PciChip(args.ttdevice)
 
     time.sleep(5) # Sleep 5s, telemetry sometimes not available immediately after reset

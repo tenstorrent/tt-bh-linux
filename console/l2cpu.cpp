@@ -5,6 +5,7 @@
 #include <cassert>
 #include <sstream>
 #include <sys/mman.h>
+#include <time.h>
 #include "l2cpu.h"
 
 /*
@@ -49,6 +50,7 @@ L2CPU::L2CPU(int idx, int card_idx)
     std::stringstream chardev_string;
     chardev_string<<"/dev/tenstorrent/"<<card_idx;
     fd = open(chardev_string.str().c_str(), O_RDWR | O_CLOEXEC);
+    set_frequency();
     starting_address = l2cpu_starting_address_mapping.at(idx);
     coordinates = l2cpu_tile_mapping.at(idx);
     memory_size = l2cpu_memory_size_mapping.at(idx);
@@ -97,6 +99,79 @@ std::unique_ptr<TlbWindow2M> L2CPU::get_persistent_2M_tlb_window(uint64_t addr){
 // Returns the starting address of the L2CPU's memory
 uint8_t* L2CPU::get_memory_ptr(){
     return memory+(starting_address-0x4000'0000'0000ULL);
+}
+
+void L2CPU::set_frequency(){
+  const uint64_t PLL4_BASE = 0x80020500;
+  const uint64_t PLL_CNTL_1 = 0x4;
+  const uint64_t PLL_CNTL_5 = 0x14;
+
+  // Default to 1750 MHz
+  uint16_t target_fbdiv = 140;
+  uint8_t target_postdiv[4] = {1, 1, 1, 1};
+
+  union PLLCNTL5 {
+    uint32_t raw;
+    struct __attribute__((packed)) {
+      uint8_t postdiv[4];
+    } reg;
+  };
+
+  union PLLCNTL1 {
+    uint32_t raw;
+    struct __attribute__((packed)) {
+      uint8_t refdiv;
+      uint8_t postdiv;
+      uint16_t fbdiv;
+    } reg;
+  };
+
+  // Create TLB windows for accessing PLL registers
+  TlbWindow2M window_cntl5(fd, 8, 0, PLL4_BASE + PLL_CNTL_5);
+  TlbWindow2M window_cntl1(fd, 8, 0, PLL4_BASE + PLL_CNTL_1);
+
+  // Read initial values
+  PLLCNTL5 current_postdivs;
+  current_postdivs.raw = window_cntl5.read32(0);
+
+  PLLCNTL1 current_fbdiv;
+  current_fbdiv.raw = window_cntl1.read32(0);
+
+  struct timespec sleep_time = {0, 1}; // 1 nanosecond
+
+  // Step 1: Increase postdivs that need to go up
+  for (int i = 0; i < 4; i++) {
+    if (target_postdiv[i] > current_postdivs.reg.postdiv[i]) {
+      int8_t one_step = 1;
+      while (current_postdivs.reg.postdiv[i] != target_postdiv[i]) {
+        current_postdivs.reg.postdiv[i] += one_step;
+        window_cntl5.write32(0, current_postdivs.raw);
+        nanosleep(&sleep_time, nullptr);
+      }
+    }
+  }
+
+  // Step 2: Adjust fbdiv
+  if (current_fbdiv.reg.fbdiv != target_fbdiv) {
+    int16_t one_step = (target_fbdiv > current_fbdiv.reg.fbdiv) ? 1 : -1;
+    while (current_fbdiv.reg.fbdiv != target_fbdiv) {
+      current_fbdiv.reg.fbdiv += one_step;
+      window_cntl1.write32(0, current_fbdiv.raw);
+      nanosleep(&sleep_time, nullptr);
+    }
+  }
+
+  // Step 3: Decrease postdivs that need to go down
+  for (int i = 0; i < 4; i++) {
+    if (target_postdiv[i] < current_postdivs.reg.postdiv[i]) {
+      int8_t one_step = -1;
+      while (current_postdivs.reg.postdiv[i] != target_postdiv[i]) {
+        current_postdivs.reg.postdiv[i] += one_step;
+        window_cntl5.write32(0, current_postdivs.raw);
+        nanosleep(&sleep_time, nullptr);
+      }
+    }
+  }
 }
 
 L2CPU::~L2CPU() noexcept

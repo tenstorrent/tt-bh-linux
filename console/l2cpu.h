@@ -33,6 +33,8 @@ public:
 
     uint8_t* get_memory_ptr();
 
+    void set_frequency();
+
     xy_t get_coordinates();
 
     std::unique_ptr<TlbWindow2M> get_persistent_2M_tlb_window(uint64_t addr);
