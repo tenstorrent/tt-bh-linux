@@ -27,6 +27,7 @@ l2cpu_gddr_enable_bit_mapping = {
 def parse_args():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--boot", action='store_true', help="Boot the core after loading the bin files")
+    parser.add_argument("--ttdevice", type=int,default=0, help="tenstorrent card to use")
     parser.add_argument("--l2cpu", type=int, nargs="+", default=[0], help="list of L2CPUs to boot")
 
     # If using FW_PAYLOAD, set these args for rootfs and opensbi
@@ -84,8 +85,8 @@ def read_bin_file(file_path):
 def main():
     args = parse_args()
     l2cpus_to_boot = args.l2cpu
-    chip = PciChip(0)
-    pci_board_reset([0])
+    pci_board_reset([args.ttdevice])
+    chip = PciChip(args.ttdevice)
 
     time.sleep(5) # Sleep 5s, telemetry sometimes not available immediately after reset
     telemetry = chip.get_telemetry()

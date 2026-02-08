@@ -116,9 +116,9 @@ struct debug_descriptor {
     u64 virtuart_base;
 };
 
-inline int uart_loop(int l2cpu_idx, std::atomic<bool>& exit_thread_flag) {
+inline int uart_loop(int ttdevice, int l2cpu_idx, std::atomic<bool>& exit_thread_flag) {
 
-    L2CPU l2cpu(l2cpu_idx);
+    L2CPU l2cpu(l2cpu_idx, ttdevice);
 
     uint64_t starting_address = l2cpu.get_starting_address();
 

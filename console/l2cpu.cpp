@@ -3,6 +3,7 @@
 
 #include <fcntl.h>
 #include <cassert>
+#include <sstream>
 #include <sys/mman.h>
 #include "l2cpu.h"
 
@@ -41,11 +42,13 @@ const std::map<int, uint64_t> l2cpu_memory_size_mapping {
     {3, 0x8000'0000ULL},
 };
 
-L2CPU::L2CPU(int idx)
-    : idx(idx)
+L2CPU::L2CPU(int idx, int card_idx)
+    : idx(idx), card_idx(card_idx)
 {
     assert(idx >=0 && idx < 4);
-    fd = open("/dev/tenstorrent/0", O_RDWR | O_CLOEXEC);
+    std::stringstream chardev_string;
+    chardev_string<<"/dev/tenstorrent/"<<card_idx;
+    fd = open(chardev_string.str().c_str(), O_RDWR | O_CLOEXEC);
     starting_address = l2cpu_starting_address_mapping.at(idx);
     coordinates = l2cpu_tile_mapping.at(idx);
     memory_size = l2cpu_memory_size_mapping.at(idx);

@@ -15,6 +15,7 @@ class L2CPU
     int fd;
 
     int idx;
+    int card_idx;
     uint64_t starting_address, memory_size;
 
     // ptrs to first (0x4000'0000'0000) and second (0x4001'0000'0000) memory regions of L2CPU memory
@@ -25,7 +26,7 @@ class L2CPU
     xy_t coordinates;
 
 public:
-    L2CPU(int idx);
+    L2CPU(int idx, int card_idx=0);
 
     uint64_t get_starting_address();
     uint64_t get_memory_size();
