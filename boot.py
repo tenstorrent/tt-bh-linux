@@ -9,6 +9,7 @@ from tt_smi.tt_smi_backend import pci_board_reset
 import clock
 import time
 import libfdt
+import struct
 
 l2cpu_tile_mapping = {
     0: (8, 3),
@@ -118,7 +119,7 @@ def main():
         
         fdt = libfdt.Fdt(dtb_bytes)
         # Add some free space to the dtb
-        fdt.resize(len(dtb_bytes) + 1000)
+        fdt.resize(len(dtb_bytes) + 2000)
         chosen_offset = fdt.path_offset("/chosen", libfdt.QUIET_NOTFOUND)
         if chosen_offset < 0:
             # Device tree doesn't have a chosen node, add chosen node and bootargs value
@@ -134,9 +135,56 @@ def main():
             exit(1)
         fdt.setprop(chosen_offset, "bootargs", bytes(bootargs, encoding="utf-8") + b'\0')
 
+        memory_node = fdt.path_offset("/memory@400030000000", libfdt.QUIET_NOTFOUND)
+        if memory_node < 0:
+            print("memory node not found in DT. Exiting")
+            exit(1)
+
+        mem = fdt.getprop(memory_node, "reg")
+        mem_start, mem_size = struct.unpack('>QQ', mem)
+        mem_end = mem_start + mem_size
+
+        reserved_memory_offset = fdt.path_offset("/reserved-memory", libfdt.QUIET_NOTFOUND)
+        if reserved_memory_offset < 0:
+            reserved_memory_offset = fdt.add_subnode(0, "reserved-memory")
+            fdt.setprop_u32(reserved_memory_offset, "#address-cells", 2)
+            fdt.setprop_u32(reserved_memory_offset, "#size-cells", 2)
+            fdt.setprop(reserved_memory_offset, "ranges", b'')
+
+        virtio_reserved_offset = fdt.add_subnode(reserved_memory_offset, "memory@4000afa00000")
+        reserved_reg = struct.pack('>QQ', mem_end - 0x600000, 0x600000)
+        fdt.setprop(virtio_reserved_offset, "reg", reserved_reg)
+        fdt.setprop(virtio_reserved_offset, "no-map", b'')
+
+        soc_offset = fdt.path_offset("/soc", libfdt.QUIET_NOTFOUND)
+        if soc_offset < 0:
+            print("soc node not found in DT. Exiting")
+            exit(1)
+
+        plic_offset = fdt.path_offset("/soc/interrupt-controller@c000000", libfdt.QUIET_NOTFOUND)
+        if plic_offset < 0:
+            print("plic node not found in DT. Exiting")
+            exit(1)
+
+        plic_phandle = fdt.get_phandle(plic_offset)
+        if plic_phandle == 0:
+            # PLIC node doesn't have a phandle, create a unique one
+            plic_phandle = libfdt.fdt_get_max_phandle(fdt._fdt) + 1
+            fdt.setprop_u32(plic_offset, "phandle", plic_phandle)
+
+        for i in range(3, -1, -1):
+            virtio_addr = mem_end - 0x200000 * (i + 1)
+            virtio_irq = 33 - i
+
+            virtio_offset = fdt.add_subnode(soc_offset, f"virtio@{virtio_addr:x}")
+            fdt.setprop_str(virtio_offset, "compatible", "virtio,mmio")
+            virtio_reg = struct.pack('>QQ', virtio_addr, 0x200000)
+            fdt.setprop(virtio_offset, "reg", virtio_reg)
+            fdt.setprop_u32(virtio_offset, "interrupts", virtio_irq)
+            fdt.setprop_u32(virtio_offset, "interrupt-parent", plic_phandle)
+
         fdt.pack()
         dtb_bytes = fdt._fdt
-
 
         # Enable the whole cache when using DRAM
         L3_REG_BASE=0x02010000
