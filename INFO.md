@@ -11,8 +11,8 @@ hence assume we're putting the rootfs at 0x4000e5000000 (which is
 Compiling device tree `dtc x280.dts > x280.dtb`
 
 ### Different methods of booting
-1. Running with FW_PAYLOAD, Opensbi has kernel and dtb integrated into it
-Opensbi compiled with these args
+1. Running with FW_PAYLOAD, OpenSBI has kernel and dtb integrated into it
+OpenSBI compiled with these args
 ```
 CROSS_COMPILE=riscv64-linux-gnu- make DEBUG=1 FW_PIC=y FW_PAYLOAD_OFFSET=0x200000 PLATFORM=generic FW_PAYLOAD=y FW_PAYLOAD_PATH=<path-to-kernel> FW_FDT_PATH=<path-to-dtb>
 ```
@@ -28,8 +28,8 @@ FS=<path-to-rootfs-img>
 python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR
 ```
 
-2. Running with FW_JUMP, Opensbi has dtb integrated into it, kernel is separate
-Opensbi compiled with these args
+2. Running with FW_JUMP, OpenSBI has dtb integrated into it, kernel is separate
+OpenSBI compiled with these args
 ```
 CROSS_COMPILE=riscv64-linux-gnu- make DEBUG=1 FW_PIC=y FW_JUMP=y FW_JUMP_OFFSET=0x200000 FW_FDT_PATH=<path-to-dtb> PLATFORM=generic
 ```
@@ -47,11 +47,11 @@ KERNEL=<path-to-kernel-image>
 python boot.py --boot --opensbi_bin $PAYLOAD --opensbi_dst $PAYLOAD_ADDR --rootfs_bin $FS --rootfs_dst $FS_ADDR --kernel_bin $KERNEL --kernel_dst $KERNEL_ADDR
 ```
 
-3. Running with FW_JUMP, Opensbi doesn't have kernel or dtb integrated, both are separate
+3. Running with FW_JUMP, OpenSBI doesn't have kernel or dtb integrated, both are separate
 Note: this doesn't work currently, requires some patching to opensbi to set dtb
 location in a1 register before boot (@mikey)
 
-Opensbi compiled with these args
+OpenSBI compiled with these args
 ```
 CROSS_COMPILE=riscv64-linux-gnu- make DEBUG=1 FW_PIC=y FW_JUMP=y FW_JUMP_OFFSET=0x200000 FW_JUMP_FDT_OFFSET=0x100000  PLATFORM=generic
 ```

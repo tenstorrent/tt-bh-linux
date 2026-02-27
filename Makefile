@@ -362,7 +362,7 @@ _need_hosttool:
 _need_ttkmd:
 	$(call _need_file,/dev/tenstorrent/0,install,install_ttkmd)
 
-# The spelling is delibrate as _need_file will add -ing
+# The spelling is deliberate as _need_file will add -ing
 _need_linux_tree:
 	$(call _need_file,linux,clon,clone_linux)
 

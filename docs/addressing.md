@@ -139,12 +139,12 @@ not possible (it is unlikely that IOVA will be aligned to a 128GB boundary).
 * Add a pmem device tree entry using the physical address of the X280->NOC
 window and appropriate size.
 * On Blackhole products (p100a, p150a, p150b) use (x=19, y=24) to access
-the PCIe endpoint tile via NOC.  This coodinate is valid for both NOC0 and NOC1.
+the PCIe endpoint tile via NOC.  This coordinate is valid for both NOC0 and NOC1.
 Please note: this may not be valid for pre-production hardware without hardware
 translation enabled.
 
 Two caveats:
-1. This doesn’t work with a mmaped file.
+1. This doesn’t work with a memory-mapped file.
 2. tt-kmd ownership of iATU programming is a work in process with a goal of
 preventing different userspace applications from running over each other’s iATU
 regions.  The use-case described above is not supported by tt-kmd but could be.

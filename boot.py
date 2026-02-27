@@ -46,7 +46,7 @@ def parse_args():
 
     # If using FW_JUMP without dtb integrated into opensbi, set these dtb args
     # Requires some opensbi patching to work properly
-    # The user can pass in a different device tree for each l2cpu here. The number of dtbs bassed here is the number of l2cpus we boot
+    # The user can pass in a different device tree for each l2cpu here. The number of dtbs passed here is the number of l2cpus we boot
     # By default, if the user passes in only 1 value here, we boot l2cpu0 only
     parser.add_argument("--dtb_bin", type=str, nargs="+", required=False, help="list of path to dtb bin file for each l2cpu")
     parser.add_argument("--dtb_dst", type=str, nargs="+", required=False, help="list of Destination address for dtb for each l2cpu")
