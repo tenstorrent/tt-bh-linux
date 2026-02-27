@@ -9,7 +9,7 @@
 #include "l2cpu.h"
 
 /*
-The blackhole chip consists of different tiles (tensix, gddr, pcie, ethernet, l2cpu) that are addressible using their location on the NOC.
+The blackhole chip consists of different tiles (tensix, gddr, pcie, ethernet, l2cpu) that are addressable using their location on the NOC.
 
 A L2CPU tile represents the Sifive X280 Quad core riscv64 CPU along with it's attached peripherals (interrupt controllers, etc..)
 
@@ -179,5 +179,4 @@ L2CPU::~L2CPU() noexcept
     munmap(memory, 2ULL<<32);
     close(fd);
 }
-
 

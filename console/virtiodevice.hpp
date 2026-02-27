@@ -28,7 +28,7 @@ protected:
     std::shared_ptr<TlbWindow2M> window, interrupt_address_window; // MMIO window as a class member
 
     // Ptr to virtio-mmio device's reg region
-    // None of the virtuqeueus/actual data transfer happens here
+    // None of the virtqueues/actual data transfer happens here
     // Only used for config/negotiation
     uint8_t* mmio_base;
     uint64_t mmio_region_offset;
@@ -46,11 +46,11 @@ protected:
     // Properties of Virtqueues used by device
     // Number of virtqueues used by device
     // Most use 1, some like network may use many
-    // can be overriden by derived class
+    // can be overridden by derived class
     uint32_t num_queues = 1; 
      // Size of header in descriptor table, 
      // essentially sort of a "number of bytes to skip" number
-     // can be overriden by derived class
+     // can be overridden by derived class
     uint64_t queue_header_size = 0;
     // Max size of virtqueue, probably should make this as large as possible, 16384 maybe?
     uint16_t queue_size = 16384;
@@ -371,7 +371,7 @@ public:
                         processed[queue_idx] += 1;
                     }
                     if (should_i_set_interrupt){
-                        // Set interrupt on plic if we processed atleast 1 descriptor
+                        // Set interrupt on plic if we processed at least 1 descriptor
                         set_interrupt();
                     }
                 // }
