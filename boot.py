@@ -5,7 +5,10 @@ from argparse import ArgumentParser
 import sys
 import os
 from pyluwen import PciChip
-from tt_smi.tt_smi_backend import pci_board_reset
+try:
+    from tt_smi.tt_smi_backend import pci_board_reset
+except ImportError:
+    from tt_smi.tt_smi_reset import pci_board_reset
 import clock
 import time
 import libfdt
