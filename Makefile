@@ -59,6 +59,7 @@ help:
 	@echo "See README.md for more information, or use the recipies below to experiment."
 	@echo ""
 	@echo "Available recipes:"
+	@echo "    check_status           # Check which L2CPUs are available"
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
 	@echo "    ssh                    # SSH to machine (requires a booted RISC-V)"
@@ -89,6 +90,10 @@ help:
 
 #################################
 # Recipes that run things
+
+# Check which L2CPUs are available
+check_status: _need_python _need_luwen
+	$(PYTHON) check_l2cpu_status.py
 
 # Boot one L2CPU in Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
@@ -456,6 +461,7 @@ endef
 	boot \
 	boot_all \
 	build_all \
+	check_status \
 	build_hosttool \
 	build_linux \
 	build_opensbi \
