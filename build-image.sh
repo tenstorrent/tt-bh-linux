@@ -14,7 +14,7 @@
 # qemu-user-static qemu-utils debootstrap
 
 DISK_IMAGE=debian-riscv64.qcow2
-SIZE=1G
+SIZE=4G
 USER=debian
 HOSTNAME=tt-blackhole
 
@@ -32,7 +32,7 @@ function info() {
 
 function cleanup() {
     info "Unmounting $MOUNT and shutting down qemu-nbd"
-    umount -ql $MOUNT/dev $MOUNT/proc $MOUNT/sys $MOUNT
+    umount -ql $MOUNT/var/cache $MOUNT/dev $MOUNT/proc $MOUNT/sys $MOUNT
     sync; sync; sync
     killall qemu-nbd
 
@@ -59,13 +59,31 @@ trap cleanup EXIT
 
 info "Installing system with debootstrap"
 mkdir -p $CACHE
-PACKAGES=sudo,openssh-server,systemd-timesyncd,vim,python3,make,gcc,libc6-dev,neowofetch,systemd-resolved,dbus,htop,ninvaders,git,wget,ca-certificates
+PACKAGES=sudo,openssh-server,systemd-timesyncd,vim,python3,make,neowofetch,systemd-resolved,dbus,htop,ninvaders,git,wget,ca-certificates
 debootstrap --cache-dir $CACHE --include $PACKAGES --arch riscv64 trixie $MOUNT http://deb.debian.org/debian
 
 info "Mounting filesystems"
 mount -o bind,ro /dev $MOUNT/dev
 mount -t proc none $MOUNT/proc
 mount -t sysfs none $MOUNT/sys
+mount -t tmpfs tmpfs $MOUNT/var/cache
+
+info "Pinning testing to not be used by default"
+cat > $MOUNT/etc/apt/preferences.d/pin-testing <<PINEOF
+Package: *
+Pin: release a=testing
+Pin-Priority: -1
+PINEOF
+
+echo "deb http://deb.debian.org/debian testing main" > $MOUNT/etc/apt/sources.list.d/testing.list
+
+chroot $MOUNT apt-get update -qq
+chroot $MOUNT apt-get install -qq -y --no-install-recommends -t testing gcc-16 libc6-dev
+chroot $MOUNT update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-16 100
+# Prerelease binaries come with symbols making them huge
+# Use the riscv64 strip as the host one may not understand the rv64 elf
+chroot $MOUNT strip /usr/libexec/gcc/riscv64-linux-gnu/16/lto1
+chroot $MOUNT strip /usr/libexec/gcc/riscv64-linux-gnu/16/cc1
 
 info "Adding 'debian' user"
 chroot $MOUNT adduser --disabled-password --comment '' $USER
