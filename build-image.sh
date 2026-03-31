@@ -38,7 +38,9 @@ function cleanup() {
 
     if [ -e $DISK_IMAGE ]; then
         info "Converting qcow2 to raw disk image"
-        qemu-img convert $DISK_IMAGE ${DISK_IMAGE%.qcow2}.img
+        RAW_IMAGE=${DISK_IMAGE%.qcow2}.img
+        qemu-img convert $DISK_IMAGE $RAW_IMAGE
+        info "Image size: $(du -sh $RAW_IMAGE | awk '{print $1}') ($(stat -c %s $RAW_IMAGE))"
     fi
 }
 
