@@ -365,7 +365,7 @@ _need_hosttool:
 	$(call _need_file,console/tt-bh-linux,build,build_hosttool)
 
 _need_ttkmd:
-	$(call _need_file,/dev/tenstorrent/0,install,install_ttkmd)
+	$(call _need_file,/dev/tenstorrent/0,install,install_tt_installer)
 
 # The spelling is deliberate as _need_file will add -ing
 _need_linux_tree:
