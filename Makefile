@@ -79,6 +79,7 @@ help:
 	@echo "    install_kernel_pkgs    # Install packages needed to build the kernel"
 	@echo "    install_qemu           # Install riscv qemu and dependencies"
 	@echo "    install_hosttool_pkgs  # Install dependancies for compiling host tool"
+	@echo "    install_tool_pkgs      # Install miscellaneous tool packages"
 	@echo "    install_tt_installer   # Install (run) tt-installer for tt-kmd, tt-smi and luwen"
 	@echo "    clone_linux            # Clone the Tenstorrent Linux kernel source tree"
 	@echo "    clone_opensbi          # Clone the Tenstorrent opensbi source tree"
@@ -243,7 +244,7 @@ clean_downloads:
 # Recipes that install packages
 
 # Install all packages
-install_all: apt_update install_kernel_pkgs install_hosttool_pkgs
+install_all: apt_update install_kernel_pkgs install_hosttool_pkgs install_tool_pkgs
 	@echo "Install complete! Now run 'make build_all' to build Linux, OpenSBI and the host tool"
 
 sudo := sudo
@@ -264,6 +265,10 @@ install_kernel_pkgs:
 # Install riscv qemu and dependencies
 install_qemu:
 	$(call install,qemu-system-misc qemu-utils qemu-system-common qemu-system-data qemu-efi-riscv64)
+
+# Install basic tools (wget, unzip, xz-utils, python3, dtc, e2tools)
+install_tool_pkgs:
+	$(call install,wget xz-utils unzip python3 device-tree-compiler e2tools)
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
