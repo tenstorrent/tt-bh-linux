@@ -186,7 +186,7 @@ build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
 	ln -f opensbi/build/platform/generic/firmware/fw_jump.bin fw_jump.bin
 
 # Build tt-bh-linux
-build_hosttool: _need_gcc _need_libvdevslirp
+build_hosttool: _need_gcc _need_libvdeslirp
 	$(MAKE) -C console -j $(nproc) $(quiet_make)
 
 # Generate a SSH key and add it to the image
@@ -411,7 +411,7 @@ _need_tt_installer:
 _need_tmux:
 	$(call _need_prog,tmux,install,install_hosttool_pkgs)
 
-_need_libvdevslirp:
+_need_libvdeslirp:
 	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install,install_hosttool_pkgs)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
@@ -502,4 +502,4 @@ endef
 	_need_tmux \
 	_need_unxz \
 	_need_unzip \
-	_need_libvdevslirp
+	_need_libvdeslirp
