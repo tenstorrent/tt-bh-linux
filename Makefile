@@ -412,7 +412,7 @@ _need_tmux:
 	$(call _need_prog,tmux,install,install_hosttool_pkgs)
 
 _need_libvdevslirp:
-	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install_hosttool_pkgs)
+	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install,install_hosttool_pkgs)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
