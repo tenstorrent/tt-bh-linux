@@ -388,7 +388,7 @@ _need_python:
 	$(call _need_prog,python3,install,install_tool_pkgs)
 
 _need_riscv64_toolchain:
-	$(call _need_prog,riscv64-linux-gnu-gcc,install,install_toolchain_pkgs)
+	$(call _need_prog,riscv64-linux-gnu-gcc,install,install_kernel_pkgs)
 
 _need_unxz:
 	$(call _need_prog,unxz,install,install_tool_pkgs)
