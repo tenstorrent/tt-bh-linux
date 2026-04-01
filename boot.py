@@ -6,9 +6,12 @@ import sys
 import os
 from pyluwen import PciChip
 try:
+    # Luwen pre-v4.2.0
     from tt_smi.tt_smi_backend import pci_board_reset
 except ImportError:
+    # v4.2.0 onwards
     from tt_smi.tt_smi_reset import pci_board_reset
+    from tt_smi.tt_smi_reset import pci_board_reset, parse_reset_input
 import clock
 import time
 import libfdt
@@ -89,7 +92,10 @@ def read_bin_file(file_path):
 def main():
     args = parse_args()
     l2cpus_to_boot = args.l2cpu
-    pci_board_reset([args.ttdevice])
+    try:
+        pci_board_reset([args.ttdevice])
+    except (AttributeError, TypeError):
+        pci_board_reset(parse_reset_input([f"/dev/tenstorrent/{args.ttdevice}"]), use_umd=False)
     f = os.open(f"/dev/tenstorrent/{args.ttdevice}", os.O_RDWR)
     chip = PciChip(args.ttdevice)
 
