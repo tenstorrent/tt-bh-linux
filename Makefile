@@ -403,7 +403,7 @@ _need_e2tools:
 	$(call _need_prog,e2cp,install,install_tool_pkgs)
 
 _need_ssh_key:
-	$(call _need_file,user,build_ssh_key)
+	$(call _need_file,user,build,build_ssh_key)
 
 _need_tt_installer:
 	$(call _need_file,tt-installer-v1.1.0.sh,download,download_tt_installer)
