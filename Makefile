@@ -200,7 +200,7 @@ build_ssh_key: _need_e2tools
 build_all: build_linux build_opensbi build_hosttool
 	@echo "Build complete! Now run 'make boot' to run Linux"
 
-build_dtb_all:
+build_dtb_all: _need_dtc
 	dtc misc/blackhole-p100-2.dts > blackhole-p100-2.dtb
 	dtc misc/blackhole-p100-3.dts > blackhole-p100-3.dtb
 
@@ -333,7 +333,7 @@ download_prebuilt: _need_wget _need_unzip
 	unzip tt-bh-linux.zip
 	rm tt-bh-linux.zip
 
-download_tt_installer:
+download_tt_installer: _need_wget
 	$(call wget,tt-installer-v1.1.0.sh,https://github.com/tenstorrent/tt-installer/releases/download/v1.1.0/install.sh)
 	chmod u+x tt-installer-v1.1.0.sh
 
