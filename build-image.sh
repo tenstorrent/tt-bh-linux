@@ -78,12 +78,14 @@ PINEOF
 echo "deb http://deb.debian.org/debian testing main" > $MOUNT/etc/apt/sources.list.d/testing.list
 
 chroot $MOUNT apt-get update -qq
-chroot $MOUNT apt-get install -qq -y --no-install-recommends -t testing gcc-16 libc6-dev
+chroot $MOUNT apt-get install -qq -y --no-install-recommends -t testing gcc-16 libc6-dev g++-16
 chroot $MOUNT update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-16 100
+chroot $MOUNT update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-16 100
 # Prerelease binaries come with symbols making them huge
 # Use the riscv64 strip as the host one may not understand the rv64 elf
 chroot $MOUNT strip /usr/libexec/gcc/riscv64-linux-gnu/16/lto1
 chroot $MOUNT strip /usr/libexec/gcc/riscv64-linux-gnu/16/cc1
+chroot $MOUNT strip /usr/libexec/gcc/riscv64-linux-gnu/16/cc1plus
 
 info "Adding 'debian' user"
 chroot $MOUNT adduser --disabled-password --comment '' $USER
