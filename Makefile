@@ -354,7 +354,7 @@ _need_dtb_all:
 	$(call _need_file,blackhole-p100-3.dtb,build,build_dtb_all)
 
 _need_rootfs:
-	$(call _need_file,$(DISK_IMAGE),build,download_rootfs)
+	$(call _need_file,$(DISK_IMAGE),download,download_rootfs)
 
 _need_hosttool:
 	$(call _need_file,console/tt-bh-linux,build,build_hosttool)
