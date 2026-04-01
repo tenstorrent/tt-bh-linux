@@ -460,10 +460,14 @@ endef
 .PHONY: apt_update \
 	boot \
 	boot_all \
+	boot_cloud_init \
+	boot_initramfs \
 	build_all \
+	build_dtb_all \
 	build_hosttool \
 	build_linux \
 	build_opensbi \
+	build_ssh_key \
 	clean \
 	clean_all \
 	clean_clones \
@@ -489,11 +493,15 @@ endef
 	install_tool_pkgs \
 	install_tt_installer \
 	install_pylibfdt \
+	ssh \
 	_need_cloud_image_utils \
 	_need_dtb \
+	_need_dtb_all \
 	_need_dtc \
+	_need_e2tools \
 	_need_gcc \
 	_need_git \
+	_need_hosttool \
 	_need_pylibfdt \
 	_need_linux \
 	_need_linux_tree \
@@ -503,8 +511,11 @@ endef
 	_need_python \
 	_need_riscv64_toolchain \
 	_need_rootfs \
+	_need_ssh_key \
 	_need_tt_installer \
 	_need_tmux \
+	_need_ttkmd \
 	_need_unxz \
 	_need_unzip \
+	_need_wget \
 	_need_libvdeslirp
