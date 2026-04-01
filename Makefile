@@ -136,8 +136,8 @@ user-data.img: user-data.yaml _need_cloud_image_utils
 
 # Boot with cloud-init image attached
 boot_cloud_init: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt user-data.img
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
-	./console/tt-bh-linux --l2cpu $(L2CPU) --disk $(DISK_IMAGE) --cloud-init user-data.img
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
+	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE) --cloud-init user-data.img
 
 #################################
 # Recipes that build things
