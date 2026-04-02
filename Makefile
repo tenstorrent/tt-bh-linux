@@ -259,13 +259,13 @@ apt_update:
 install_kernel_pkgs:
 	$(call install,build-essential libncurses-dev gawk flex bison openssl libssl-dev libelf-dev libudev-dev libpci-dev libiberty-dev autoconf git make bc gcc-riscv64-linux-gnu binutils-multiarch ccache device-tree-compiler)
 
-# Install basic tools (wget, unzip, xz-utils, python3, dtc, e2tools)
+# Install basic tools (wget, unzip, python3, dtc, e2tools)
 install_tool_pkgs:
-	$(call install,wget xz-utils unzip python3 device-tree-compiler e2tools qemu-utils)
+	$(call install,wget unzip python3 device-tree-compiler e2tools qemu-utils)
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux cloud-image-utils)
+	$(call install,libvdeslirp-dev libslirp-dev unzip e2tools tmux cloud-image-utils)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -303,7 +303,7 @@ define wget
 endef
 
 # Download Debian Trixie riscv64 rootfs
-download_rootfs: _need_wget _need_unxz _need_qemu_img
+download_rootfs: _need_wget _need_unzip _need_qemu_img
 	@$(SHELL_VERBOSE) \
 	set -eo pipefail; \
 	if [ -f $(DISK_IMAGE) ]; then \
@@ -387,9 +387,6 @@ _need_python:
 
 _need_riscv64_toolchain:
 	$(call _need_prog,riscv64-linux-gnu-gcc,install,install_kernel_pkgs)
-
-_need_unxz:
-	$(call _need_prog,unxz,install,install_tool_pkgs)
 
 _need_wget:
 	$(call _need_prog,wget,install,install_tool_pkgs)
@@ -508,7 +505,6 @@ endef
 	_need_tt_installer \
 	_need_tmux \
 	_need_ttkmd \
-	_need_unxz \
 	_need_unzip \
 	_need_wget \
 	_need_libvdeslirp \
