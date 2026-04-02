@@ -298,7 +298,7 @@ clone_all: clone_linux clone_opensbi
 # Recipes that download things
 
 define wget
-    wget -O $(1).tmp $(2)
+    wget -O $(1).tmp $(2) ; \
     mv -f $(1).tmp $(1)
 endef
 
