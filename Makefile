@@ -75,7 +75,6 @@ help:
 	@echo "    clean_downloads        # Remove all downloaded files"
 	@echo "    install_all            # Install all packages"
 	@echo "    install_kernel_pkgs    # Install packages needed to build the kernel"
-	@echo "    install_qemu           # Install riscv qemu and dependencies"
 	@echo "    install_hosttool_pkgs  # Install dependancies for compiling host tool"
 	@echo "    install_tool_pkgs      # Install miscellaneous tool packages"
 	@echo "    install_tt_installer   # Install (run) tt-installer for tt-kmd, tt-smi and luwen"
@@ -260,13 +259,9 @@ apt_update:
 install_kernel_pkgs:
 	$(call install,build-essential libncurses-dev gawk flex bison openssl libssl-dev libelf-dev libudev-dev libpci-dev libiberty-dev autoconf git make bc gcc-riscv64-linux-gnu binutils-multiarch ccache device-tree-compiler)
 
-# Install riscv qemu and dependencies
-install_qemu:
-	$(call install,qemu-system-misc qemu-utils qemu-system-common qemu-system-data qemu-efi-riscv64)
-
 # Install basic tools (wget, unzip, xz-utils, python3, dtc, e2tools)
 install_tool_pkgs:
-	$(call install,wget xz-utils unzip python3 device-tree-compiler e2tools)
+	$(call install,wget xz-utils unzip python3 device-tree-compiler e2tools qemu-utils)
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
@@ -308,7 +303,7 @@ define wget
 endef
 
 # Download Debian Trixie riscv64 rootfs
-download_rootfs: _need_wget _need_unxz
+download_rootfs: _need_wget _need_unxz _need_qemu_img
 	@$(SHELL_VERBOSE) \
 	set -eo pipefail; \
 	if [ -f $(DISK_IMAGE) ]; then \
@@ -417,6 +412,9 @@ _need_tmux:
 _need_libvdeslirp:
 	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install,install_hosttool_pkgs)
 
+_need_qemu_img:
+	$(call _need_prog,qemu-img,install,install_tool_pkgs)
+
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
 define _need_file =
@@ -485,7 +483,6 @@ endef
 	install_all \
 	install_hosttool_pkgs \
 	install_kernel_pkgs \
-	install_qemu \
 	install_tool_pkgs \
 	install_tt_installer \
 	install_pylibfdt \
@@ -514,4 +511,6 @@ endef
 	_need_unxz \
 	_need_unzip \
 	_need_wget \
-	_need_libvdeslirp
+	_need_libvdeslirp \
+	_need_qemu_img
+
