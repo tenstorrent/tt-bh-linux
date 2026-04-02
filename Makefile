@@ -62,8 +62,6 @@ help:
 	@echo "    boot                   # Boot the Blackhole RISC-V CPU"
 	@echo "    connect                # Connect to console (requires a booted RISC-V)"
 	@echo "    ssh                    # SSH to machine (requires a booted RISC-V)"
-	@echo "    boot_all               # Boot all 4 L2CPUs on Blackhole Chip"
-	@echo "    connect_all            # Launch 4x4 Tmux grid and connect to each L2CPU"
 	@echo "    build_linux            # Build the kernel"
 	@echo "    build_opensbi          # Build opensbi"
 	@echo "    build_hosttool         # Build tt-bh-linux"
@@ -77,8 +75,8 @@ help:
 	@echo "    clean_downloads        # Remove all downloaded files"
 	@echo "    install_all            # Install all packages"
 	@echo "    install_kernel_pkgs    # Install packages needed to build the kernel"
-	@echo "    install_qemu           # Install riscv qemu and dependencies"
 	@echo "    install_hosttool_pkgs  # Install dependancies for compiling host tool"
+	@echo "    install_tool_pkgs      # Install miscellaneous tool packages"
 	@echo "    install_tt_installer   # Install (run) tt-installer for tt-kmd, tt-smi and luwen"
 	@echo "    clone_linux            # Clone the Tenstorrent Linux kernel source tree"
 	@echo "    clone_opensbi          # Clone the Tenstorrent opensbi source tree"
@@ -137,8 +135,8 @@ user-data.img: user-data.yaml _need_cloud_image_utils
 
 # Boot with cloud-init image attached
 boot_cloud_init: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt user-data.img
-	$(PYTHON) boot.py --boot --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
-	./console/tt-bh-linux --l2cpu $(L2CPU) --disk $(DISK_IMAGE) --cloud-init user-data.img
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
+	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE) --cloud-init user-data.img
 
 #################################
 # Recipes that build things
@@ -186,7 +184,7 @@ build_opensbi: _need_riscv64_toolchain _need_gcc _need_python _need_opensbi_tree
 	ln -f opensbi/build/platform/generic/firmware/fw_jump.bin fw_jump.bin
 
 # Build tt-bh-linux
-build_hosttool: _need_gcc _need_libvdevslirp
+build_hosttool: _need_gcc _need_libvdeslirp
 	$(MAKE) -C console -j $(nproc) $(quiet_make)
 
 # Generate a SSH key and add it to the image
@@ -199,7 +197,7 @@ build_ssh_key: _need_e2tools
 build_all: build_linux build_opensbi build_hosttool
 	@echo "Build complete! Now run 'make boot' to run Linux"
 
-build_dtb_all:
+build_dtb_all: _need_dtc
 	dtc misc/blackhole-p100-2.dts > blackhole-p100-2.dtb
 	dtc misc/blackhole-p100-3.dts > blackhole-p100-3.dtb
 
@@ -243,7 +241,7 @@ clean_downloads:
 # Recipes that install packages
 
 # Install all packages
-install_all: apt_update install_kernel_pkgs install_hosttool_pkgs
+install_all: apt_update install_kernel_pkgs install_hosttool_pkgs install_tool_pkgs
 	@echo "Install complete! Now run 'make build_all' to build Linux, OpenSBI and the host tool"
 
 sudo := sudo
@@ -261,13 +259,13 @@ apt_update:
 install_kernel_pkgs:
 	$(call install,build-essential libncurses-dev gawk flex bison openssl libssl-dev libelf-dev libudev-dev libpci-dev libiberty-dev autoconf git make bc gcc-riscv64-linux-gnu binutils-multiarch ccache device-tree-compiler)
 
-# Install riscv qemu and dependencies
-install_qemu:
-	$(call install,qemu-system-misc qemu-utils qemu-system-common qemu-system-data qemu-efi-riscv64)
+# Install basic tools (wget, unzip, python3, dtc, e2tools)
+install_tool_pkgs:
+	$(call install,wget unzip python3 device-tree-compiler e2tools qemu-utils)
 
 # Install libraries for compiling the host tool and modifying disk images
 install_hosttool_pkgs:
-	$(call install,libvdeslirp-dev libslirp-dev xz-utils unzip e2tools tmux cloud-image-utils)
+	$(call install,libvdeslirp-dev libslirp-dev unzip e2tools tmux cloud-image-utils)
 
 install_tt_installer: _need_tt_installer
 	TT_MODE_NON_INTERACTIVE=0 TT_SKIP_INSTALL_HUGEPAGES=0 TT_SKIP_UPDATE_FIRMWARE=0 TT_SKIP_INSTALL_PODMAN=0 TT_SKIP_INSTALL_METALLIUM_CONTAINER=0 TT_REBOOT_OPTION=2 ./tt-installer-v1.1.0.sh
@@ -300,12 +298,12 @@ clone_all: clone_linux clone_opensbi
 # Recipes that download things
 
 define wget
-    wget -O $(1).tmp $(2)
+    wget -nv -O $(1).tmp $(2) ; \
     mv -f $(1).tmp $(1)
 endef
 
 # Download Debian Trixie riscv64 rootfs
-download_rootfs: _need_wget _need_unxz
+download_rootfs: _need_wget _need_unzip _need_qemu_img
 	@$(SHELL_VERBOSE) \
 	set -eo pipefail; \
 	if [ -f $(DISK_IMAGE) ]; then \
@@ -313,22 +311,22 @@ download_rootfs: _need_wget _need_unxz
 		exit 0; \
 	fi; \
 	set -x ; \
-	$(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.10/tt-bh-disk-image.zip)
-	unzip tt-bh-disk-image.zip
-	rm tt-bh-disk-image.zip
-	mv debian-riscv64.img rootfs.ext4
-	qemu-img resize rootfs.ext4 10G
-	e2fsck -fy rootfs.ext4
+	$(call wget,tt-bh-disk-image.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.10/tt-bh-disk-image.zip) ; \
+	unzip -o tt-bh-disk-image.zip ; \
+	rm tt-bh-disk-image.zip ; \
+	mv debian-riscv64.img rootfs.ext4 ; \
+	qemu-img resize rootfs.ext4 10G ; \
+	e2fsck -fy rootfs.ext4 ; \
 	resize2fs rootfs.ext4
 
 # Download prebuilt Linux, opensbi and dtb
 download_prebuilt: _need_wget _need_unzip
 	# TODO: Test this once repo is public
 	$(call wget,tt-bh-linux.zip,https://github.com/tenstorrent/tt-bh-linux/releases/download/v0.10/tt-bh-linux.zip)
-	unzip tt-bh-linux.zip
+	unzip -o tt-bh-linux.zip
 	rm tt-bh-linux.zip
 
-download_tt_installer:
+download_tt_installer: _need_wget
 	$(call wget,tt-installer-v1.1.0.sh,https://github.com/tenstorrent/tt-installer/releases/download/v1.1.0/install.sh)
 	chmod u+x tt-installer-v1.1.0.sh
 
@@ -354,13 +352,13 @@ _need_dtb_all:
 	$(call _need_file,blackhole-p100-3.dtb,build,build_dtb_all)
 
 _need_rootfs:
-	$(call _need_file,$(DISK_IMAGE),build,download_rootfs)
+	$(call _need_file,$(DISK_IMAGE),download,download_rootfs)
 
 _need_hosttool:
 	$(call _need_file,console/tt-bh-linux,build,build_hosttool)
 
 _need_ttkmd:
-	$(call _need_file,/dev/tenstorrent/0,install,install_ttkmd)
+	$(call _need_file,/dev/tenstorrent/0,install,install_tt_installer)
 
 # The spelling is deliberate as _need_file will add -ing
 _need_linux_tree:
@@ -388,10 +386,7 @@ _need_python:
 	$(call _need_prog,python3,install,install_tool_pkgs)
 
 _need_riscv64_toolchain:
-	$(call _need_prog,riscv64-linux-gnu-gcc,install,install_toolchain_pkgs)
-
-_need_unxz:
-	$(call _need_prog,unxz,install,install_tool_pkgs)
+	$(call _need_prog,riscv64-linux-gnu-gcc,install,install_kernel_pkgs)
 
 _need_wget:
 	$(call _need_prog,wget,install,install_tool_pkgs)
@@ -403,7 +398,7 @@ _need_e2tools:
 	$(call _need_prog,e2cp,install,install_tool_pkgs)
 
 _need_ssh_key:
-	$(call _need_file,user,build_ssh_key)
+	$(call _need_file,user,build,build_ssh_key)
 
 _need_tt_installer:
 	$(call _need_file,tt-installer-v1.1.0.sh,download,download_tt_installer)
@@ -411,8 +406,11 @@ _need_tt_installer:
 _need_tmux:
 	$(call _need_prog,tmux,install,install_hosttool_pkgs)
 
-_need_libvdevslirp:
-	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install_hosttool_pkgs)
+_need_libvdeslirp:
+	$(call _need_file,/usr/include/slirp/libvdeslirp.h,install,install_hosttool_pkgs)
+
+_need_qemu_img:
+	$(call _need_prog,qemu-img,install,install_tool_pkgs)
 
 # _need_file: Check if a file exists, and if not, run the target to create it
 # args: file action-name target
@@ -454,11 +452,14 @@ endef
 
 .PHONY: apt_update \
 	boot \
-	boot_all \
+	boot_cloud_init \
+	boot_initramfs \
 	build_all \
+	build_dtb_all \
 	build_hosttool \
 	build_linux \
 	build_opensbi \
+	build_ssh_key \
 	clean \
 	clean_all \
 	clean_clones \
@@ -471,7 +472,6 @@ endef
 	clone_linux \
 	clone_opensbi \
 	connect \
-	connect_all \
 	download_all \
 	download_prebuilt \
 	download_rootfs \
@@ -480,15 +480,18 @@ endef
 	install_all \
 	install_hosttool_pkgs \
 	install_kernel_pkgs \
-	install_qemu \
 	install_tool_pkgs \
 	install_tt_installer \
 	install_pylibfdt \
+	ssh \
 	_need_cloud_image_utils \
 	_need_dtb \
+	_need_dtb_all \
 	_need_dtc \
+	_need_e2tools \
 	_need_gcc \
 	_need_git \
+	_need_hosttool \
 	_need_pylibfdt \
 	_need_linux \
 	_need_linux_tree \
@@ -498,8 +501,12 @@ endef
 	_need_python \
 	_need_riscv64_toolchain \
 	_need_rootfs \
+	_need_ssh_key \
 	_need_tt_installer \
 	_need_tmux \
-	_need_unxz \
+	_need_ttkmd \
 	_need_unzip \
-	_need_libvdevslirp
+	_need_wget \
+	_need_libvdeslirp \
+	_need_qemu_img
+
