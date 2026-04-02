@@ -318,7 +318,7 @@ download_rootfs: _need_wget _need_unxz
 	rm tt-bh-disk-image.zip
 	mv debian-riscv64.img rootfs.ext4
 	qemu-img resize rootfs.ext4 10G
-	e2fsck -f rootfs.ext4
+	e2fsck -fy rootfs.ext4
 	resize2fs rootfs.ext4
 
 # Download prebuilt Linux, opensbi and dtb
