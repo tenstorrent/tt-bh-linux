@@ -114,7 +114,7 @@ def main():
         opensbi_addr = int(args.opensbi_dst[idx], 16)
         opensbi_bytes = read_bin_file(args.opensbi_bin)
 
-        if args.rootfs_dst and args.rootfs_bin:
+        if args.rootfs_dst and args.rootfs_bin and os.path.exists(args.rootfs_bin):
             rootfs_addr = int(args.rootfs_dst[idx], 16)
             rootfs_bytes = read_bin_file(args.rootfs_bin)
             
@@ -139,7 +139,8 @@ def main():
         if args.boot_device[:len("vda")] == "vda":
             bootargs += f" root=/dev/{args.boot_device}"
         elif args.boot_device == "initramfs":
-            bootargs += f" initrd={args.rootfs_dst[idx]},{len(rootfs_bytes)}"
+            if os.path.exists(args.rootfs_bin):
+                bootargs += f" initrd={args.rootfs_dst[idx]},{len(rootfs_bytes)}"
         else:
             print("Unsupported rootfs type")
             exit(1)
@@ -205,7 +206,7 @@ def main():
         print(f"Writing OpenSBI to 0x{opensbi_addr:x}")
         chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, opensbi_addr, opensbi_bytes)
 
-        if args.rootfs_dst and args.rootfs_bin:
+        if args.rootfs_dst and args.rootfs_bin and os.path.exists(args.rootfs_bin):
             print(f"Writing rootfs to 0x{rootfs_addr:x}")
             chip.noc_write(0, l2cpu_noc_x, l2cpu_noc_y, rootfs_addr, rootfs_bytes)
 
