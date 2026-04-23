@@ -40,6 +40,7 @@ def parse_args():
     # If using FW_PAYLOAD, set these args for rootfs and opensbi
     parser.add_argument("--boot_device", type=str, required=False, default="vda", help="Options: vda, vdaX or initramfs")
     parser.add_argument("--dt_no_virtio_devices", action="store_true", help="Don't patch DT to add virtio device nodes")
+    parser.add_argument("--extra_bootargs", type=str, default="", help="Extra kernel command line arguments")
 
     # Only used for initramfs
     parser.add_argument("--rootfs_bin", type=str, required=False, help="Path to initramfs")
@@ -144,6 +145,8 @@ def main():
         else:
             print("Unsupported rootfs type")
             exit(1)
+        if args.extra_bootargs:
+            bootargs += f" {args.extra_bootargs}"
         fdt.setprop(chosen_offset, "bootargs", bytes(bootargs, encoding="utf-8") + b'\0')
 
         memory_node = fdt.path_offset("/memory@400030000000", libfdt.QUIET_NOTFOUND)
