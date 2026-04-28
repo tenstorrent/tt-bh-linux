@@ -236,6 +236,17 @@ Halt and catch fire!
   a particular result. See [this](watch.expect) and
   [this](.github/workflows/build.yml#L154) for examples on how to do this
 
+### Bring Your Own Image
+
+`KERNEL`, `OPENSBI`, `DTB`, `DISK_IMAGE` are Make variables; override one
+or more on the command line. `IMAGEDIR=<dir>` is a shortcut that resolves
+all four to `<dir>/{Image,fw_jump.bin,blackhole-card.dtb,rootfs.ext4}`:
+
+```bash
+make boot IMAGEDIR=mydistro
+make boot KERNEL=other/Image DISK_IMAGE=other/rootfs.ext4
+```
+
 ### What is the X280's address map?
 | Base             | Top              | PMA    | Description                 |
 |------------------|------------------|--------|-----------------------------|

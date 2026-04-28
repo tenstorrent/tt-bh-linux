@@ -27,9 +27,22 @@ ifeq (,$(findstring /usr/sbin,$(PATH)))
 endif
 export PATH
 
-# Default riscv64 disk image file. Change this to point at your local image
-# if you have one
-DISK_IMAGE := rootfs.ext4
+# Boot artifacts. Override individually, or set IMAGEDIR=<dir> below to pick
+# all four from the same directory (useful when bringing your own distro).
+KERNEL     ?= Image
+OPENSBI    ?= fw_jump.bin
+DTB        ?= blackhole-card.dtb
+DISK_IMAGE ?= rootfs.ext4
+
+# IMAGEDIR shortcut: e.g. `make boot IMAGEDIR=gentoo` resolves all four to
+# gentoo/{Image,fw_jump.bin,blackhole-card.dtb,rootfs.ext4}. Explicit
+# overrides above (KERNEL=, OPENSBI=, DTB=, DISK_IMAGE=) still win.
+ifdef IMAGEDIR
+KERNEL     := $(IMAGEDIR)/Image
+OPENSBI    := $(IMAGEDIR)/fw_jump.bin
+DTB        := $(IMAGEDIR)/blackhole-card.dtb
+DISK_IMAGE := $(IMAGEDIR)/rootfs.ext4
+endif
 
 L2CPU ?= 0
 TTDEVICE ?= 0
@@ -94,12 +107,12 @@ help:
 
 # Boot one L2CPU in Blackhole RISC-V CPU
 boot: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin $(OPENSBI) --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin $(KERNEL) --kernel_dst 0x400030200000 --dtb_bin $(DTB) --dtb_dst 0x400030100000
 	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
 
 # Boot one L2CPU in Blackhole RISC-V CPU into an initramfs specified by $(INITRAMFS)
 boot_initramfs: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
-	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000 --boot_device initramfs --rootfs_bin $(INITRAMFS) $(DT_NO_VIRTIO_DEVICES)
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin $(OPENSBI) --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin $(KERNEL) --kernel_dst 0x400030200000 --dtb_bin $(DTB) --dtb_dst 0x400030100000 --boot_device initramfs --rootfs_bin $(INITRAMFS) $(DT_NO_VIRTIO_DEVICES)
 	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE)
 
 # boot_all: _need_linux _need_opensbi _need_dtb _need_dtb_all _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt
@@ -139,7 +152,7 @@ user-data.img: user-data.yaml _need_cloud_image_utils
 
 # Boot with cloud-init image attached
 boot_cloud_init: _need_linux _need_opensbi _need_dtb _need_rootfs _need_hosttool _need_python _need_luwen _need_ttkmd _need_pylibfdt user-data.img
-	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin fw_jump.bin --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin Image --kernel_dst 0x400030200000 --dtb_bin blackhole-card.dtb --dtb_dst 0x400030100000
+	$(PYTHON) boot.py --boot --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --opensbi_bin $(OPENSBI) --opensbi_dst 0x400030000000 --rootfs_dst 0x4000e5000000 --kernel_bin $(KERNEL) --kernel_dst 0x400030200000 --dtb_bin $(DTB) --dtb_dst 0x400030100000
 	./console/tt-bh-linux --ttdevice $(TTDEVICE) --l2cpu $(L2CPU) --disk $(DISK_IMAGE) --cloud-init user-data.img
 
 #################################
@@ -340,13 +353,13 @@ download_all: download_rootfs download_prebuilt
 # Helpers
 
 _need_linux:
-	$(call _need_file,Image,build,build_linux)
+	$(call _need_file,$(KERNEL),build,build_linux)
 
 _need_opensbi:
-	$(call _need_file,fw_jump.bin,build,build_opensbi)
+	$(call _need_file,$(OPENSBI),build,build_opensbi)
 
 _need_dtb:
-	$(call _need_file,blackhole-card.dtb,build,build_linux)
+	$(call _need_file,$(DTB),build,build_linux)
 
 _need_cloud_image_utils:
 	$(call _need_prog,cloud-localds,install,install_hosttool_pkgs)
